@@ -140,7 +140,7 @@ yumset()
 		\cp CentOS-Base.repo CentOS-Base.repo.$(date +%F)
 		ping -c 1 mirrors.aliyun.com &> /dev/null
 		if [ $? -eq 0 ];then
-			wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo &> /dev/null
+			#wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo &> /dev/null
 			yum clean all &> /dev/null
 			yum makecache &> /dev/null
 		else
