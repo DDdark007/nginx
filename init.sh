@@ -118,6 +118,7 @@ limitset()
 {
 	echo "======================修改文件描述符======================="
 	echo '* - nofile 65535'>/etc/security/limits.conf
+	echo '* - nproc 65536'>>/etc/security/limits.conf
 	echo '*    soft nofile 1048576'>>/etc/security/limits.conf
 	echo '*    hard nofile 1048576'>>/etc/security/limits.conf
 	ulimit -SHn 65535
