@@ -207,7 +207,6 @@ net.ipv4.tcp_rmem = 4096 873800 16777216
 net.ipv4.tcp_wmem = 4096 873800 16777216
 net.ipv4.tcp_fin_timeout = 30
 net.ipv4.tcp_keepalive_time = 30
-#net.ipv4.ip_local_port_range = 1024 65000
 fs.file-max = 1048576
 net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.default.accept_redirects = 0
