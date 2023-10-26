@@ -182,3 +182,94 @@ location / {
          auth_basic_user_file /usr/local/nginx/auth/passwd; 
 } 
 ```
+## 日志切割脚本
+```bash
+#!/bin/bash
+
+#set the path to nginx log files
+log_files_path="/usr/local/nginx/logs/"
+log_files_dir=${log_files_path}$(date -d "yesterday" +"%Y")/$(date -d "yesterday" +"%m")
+#set nginx log files you want to cut
+log_files_name=(gamefile)
+#set the path to nginx.
+nginx_sbin="/usr/local/nginx/sbin/nginx"
+#Set how long you want to save
+save_days=10
+
+############################################
+#Please do not modify the following script #
+############################################
+mkdir -p $log_files_dir
+
+log_files_num=${#log_files_name[@]}
+
+#cut nginx log files
+for((i=0;i<$log_files_num;i++));do
+mv ${log_files_path}${log_files_name[i]}.log ${log_files_dir}/${log_files_name[i]}_$(date -d "yesterday" +"%Y%m%d").log
+done
+
+#delete 30 days ago nginx log files
+find $log_files_path -mtime +$save_days -exec rm -rf {} \; 
+
+$nginx_sbin -s reload
+```
+## nginx跨域解决
+```bash
+location / {
+        # 跨域设置
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Methods 'GET, POST, OPTIONS';
+        add_header 'Access-Control-Allow-Credentials' 'true'; 
+        if ( $request_method = 'OPTIONS' ) { return 200; }
+ }
+```
+## nginx 301跳转
+```bash
+#nginx if判断匹配
+#如果访问时这个URL不是一下IP返回403
+set $flag 0;
+if ($document_uri ~ chuhzg19tvgabxmaslkdsalkdjl/login.html) {
+    set $flag "${flag}1";
+}
+if ($remote_addr !~ ^(183.56.212.99|103.179.242.35|16.163.246.137)) {
+    set $flag "${flag}2";
+}
+if ($flag = "012") {
+   return 403;
+}
+
+# 空目录跳转首页
+try_files $uri $uri/ /index.html;
+
+# 匹配开头为xxx参数的URL和 以 yyy开头的url
+if ($uri !~ (/Pay_.*\.html|/Public/*)) {
+                return 403;
+}
+
+# 匹配url进行跳转
+location ~ /benefit_detail {
+    if ($args ~* "slug=bankofchina-20170320") {
+            rewrite ^/benefit_detail /boc? permanent;
+        }
+    try_files $uri $uri/ /index.php?$query_string;
+}
+
+# 常见跳转事例
+rewrite ^/connect$ http://connect.myweb.com permanent;
+rewrite ^/connect/(.*)$ http://connect.myweb.com/$1 permanent;
+
+# http跳转https
+if ($scheme = http ) {
+return 301 https://$host$request_uri;
+}
+```
+## websocket服务的配置
+```bash
+# 例如
+location /chat/ {
+    proxy_pass http://backend;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
