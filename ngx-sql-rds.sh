@@ -6,7 +6,7 @@ MYSQL_PWD=Top123456
 MYSQL_PORT=32060
 function install_java8()
 {
-	echo -e "\033[33m***************************************************自动部署java-8**************************************************\033[0m"
+	echo -e "\033[33m***************************************************自动部署JDK-8**************************************************\033[0m"
 	wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie"  http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz
 	tar xf jdk-8u131-linux-x64.tar.gz -C /usr/local/
 	mv /usr/local/jdk1.8.0_131/ /usr/local/java
@@ -21,6 +21,7 @@ EOF
 }
 function install_java11()
 {
+	echo -e "\033[33m***************************************************自动部署JDK-11**************************************************\033[0m"
 	wget https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz
 	tar xf amazon-corretto-11-x64-linux-jdk.tar.gz -C /usr/local/
 	mv /usr/local/amazon-corretto-11.0.18.10.1-linux-x64 /usr/local/java
@@ -83,6 +84,8 @@ function install_nginx()
 	#修改配置文件
 	cd /usr/local/nginx/conf/
 	mv /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bak
+ 	wget  https://raw.githubusercontent.com/DDdark007/nginx/main/nginx.conf
+  
 	#添加开机自启
 	chmod +x /etc/rc.d/rc.local
 	echo nginx >> /etc/rc.local
