@@ -132,30 +132,39 @@ limitset()
 }
 
 #6.安装常用工具及修改yum源
-yumset()
-{
-	echo "=================安装常用工具及修改yum源==================="
-	yum install wget -y &> /dev/null
-	if [ $? -eq 0 ];then
-		cd /etc/yum.repos.d/
-		\cp CentOS-Base.repo CentOS-Base.repo.$(date +%F)
-		ping -c 1 mirrors.aliyun.com &> /dev/null
-		if [ $? -eq 0 ];then
-			#wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo &> /dev/null
-			yum clean all &> /dev/null
-			yum makecache &> /dev/null
-		else
-			echo "无法连接网络"
-    			exit $?
-  		fi
-	else
-		echo "wget安装失败"
-		exit $?
-	fi
-	yum -y install ntpdate lsof net-tools telnet vim lrzsz tree nmap nc sysstat &> /dev/null
-	action "完成安装常用工具及修改yum源" /bin/true
-	echo "==========================================================="
-	sleep 2
+yumset() {
+    echo "=================安装常用工具及修改yum源==================="
+    yum install wget -y &> /dev/null
+    if [ $? -eq 0 ]; then
+        cd /etc/yum.repos.d/
+        \cp CentOS-Base.repo CentOS-Base.repo.$(date +%F)
+        ping -c 1 mirrors.aliyun.com &> /dev/null
+        if [ $? -eq 0 ]; then
+            # 根据操作系统决定如何配置EPEL源
+            if grep -q -i "centos" /etc/os-release; then
+                echo "检测到CentOS系统，配置CentOS的EPEL源"
+                wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo &> /dev/null
+                yum install epel-release -y &> /dev/null
+            elif grep -q -i "amzn" /etc/os-release; then
+                echo "检测到Amazon Linux系统，配置Amazon Linux的EPEL源"
+                amazon-linux-extras install epel -y &> /dev/null
+            else
+                echo "未知操作系统，无法配置EPEL源"
+            fi
+            yum clean all &> /dev/null
+            yum makecache &> /dev/null
+        else
+            echo "无法连接到网络"
+            exit $?
+        fi
+    else
+        echo "wget安装失败"
+        exit $?
+    fi
+    yum -y install ntpdate lsof net-tools telnet vim lrzsz tree nmap nc sysstat bind-utils htop &> /dev/null
+    echo "完成安装常用工具及修改yum源"
+    echo "==========================================================="
+    sleep 2
 }
 
 #7. 优化系统内核
@@ -197,7 +206,6 @@ net.ipv4.tcp_max_syn_backlog = 262144
 net.ipv4.tcp_timestamps = 1
 net.ipv4.tcp_synack_retries = 1
 net.ipv4.tcp_syn_retries = 1
-net.ipv4.tcp_tw_recycle = 1
 net.ipv4.tcp_tw_reuse = 1
 net.ipv4.ip_local_port_range = 1024 65535
 net.ipv4.tcp_mem = 6177504 8236672 16777216
