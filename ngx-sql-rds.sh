@@ -107,12 +107,12 @@ function install_mysql8_el7()
   sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 
   #下载包
-  if [ -f /opt/mysql-8.0.30-1.el7.x86_64.rpm-bundle.tar ];then
+  if [ -f /opt/mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar ];then
       echo "*****存在mysql8安装包，无需下载*****"
   else
       ping -c 4 app.fslgz.com >/dev/null 2>&1
       if [ $? -eq 0 ];then
-  wget https://downloads.mysql.com/archives/get/p/23/file/mysql-8.0.30-1.el7.x86_64.rpm-bundle.tar -P /opt/
+  wget https://downloads.mysql.com/archives/get/p/23/file/mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar -P /opt/
       else
         echo "please download mysql8 package manual !"
     exit $?
@@ -141,7 +141,7 @@ function install_mysql8_el7()
      # 安装mysql
      action "***************开始安装mysql数据库***************" /bin/true
      cd /opt
-     tar -xvf mysql-8.0.30-1.el7.x86_64.rpm-bundle.tar -C /opt/  &>/dev/null
+     tar -xvf mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar -C /opt/  &>/dev/null
      yum install *.rpm -y
      cd /root/
   fi
