@@ -136,8 +136,8 @@ yumset() {
     echo "=================安装常用工具及修改yum源==================="
     yum install wget -y &> /dev/null
     if [ $? -eq 0 ]; then
-        cd /etc/yum.repos.d/
-        \cp CentOS-Base.repo CentOS-Base.repo.$(date +%F)
+        #cd /etc/yum.repos.d/
+        #\cp CentOS-Base.repo CentOS-Base.repo.$(date +%F)
         ping -c 1 mirrors.aliyun.com &> /dev/null
         if [ $? -eq 0 ]; then
             # 根据操作系统决定如何配置EPEL源
