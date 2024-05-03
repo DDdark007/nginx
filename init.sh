@@ -141,16 +141,21 @@ yumset() {
         ping -c 1 mirrors.aliyun.com &> /dev/null
         if [ $? -eq 0 ]; then
             # 根据操作系统决定如何配置EPEL源
-            if grep -q -i "centos" /etc/os-release; then
-                echo "检测到CentOS系统，配置CentOS的EPEL源"
-                wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo &> /dev/null
-                yum install epel-release -y &> /dev/null
-            elif grep -q -i "amzn" /etc/os-release; then
-                echo "检测到Amazon Linux系统，配置Amazon Linux的EPEL源"
-                amazon-linux-extras install epel -y &> /dev/null
-            else
-                echo "未知操作系统，无法配置EPEL源"
-            fi
+            #!/bin/bash
+	    # 获取操作系统信息
+	    OS_INFO=$(cat /etc/os-release)
+
+	    # 检测是否为CentOS 7
+	    if echo "$OS_INFO" | grep -q -i "centos" && echo "$OS_INFO" | grep -q "VERSION_ID=\"7\""; then
+    	    # 如果系统是CentOS 7
+            	echo "检测到CentOS 7系统，配置CentOS的EPEL源"
+    		wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo &> /dev/null
+    		yum install epel-release -y &> /dev/null
+	    else
+    		# 如果系统不是CentOS 7
+    		echo "未检测到CentOS 7系统，假定为Amazon Linux系统，配置Amazon Linux的EPEL源"
+    		amazon-linux-extras install epel -y &> /dev/null
+	    fi
             yum clean all &> /dev/null
             yum makecache &> /dev/null
         else
