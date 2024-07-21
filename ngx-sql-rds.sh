@@ -2,7 +2,7 @@
 . /etc/rc.d/init.d/functions
 #mysql
 MYSQL_HOME=/data
-MYSQL_PWD=Top123456
+MYSQL_PWD=oNzQsS4Has3GC6PL
 MYSQL_PORT=32060
 function install_java8()
 {
@@ -15,7 +15,7 @@ JAVA_HOME=/usr/local/java
 PATH=$PATH:$JAVA_HOME/bin
 EOF
 	source /etc/profile
-	ln -s /usr/local/java/bin/java /usr/bin/
+	ln -s /usr/local/java/bin/* /usr/bin/
 	which java
 	java -version
 }
@@ -30,7 +30,7 @@ JAVA_HOME=/usr/local/java
 PATH=$PATH:$JAVA_HOME/bin
 EOF
 	source /etc/profile
-	ln -s /usr/local/java/bin/java /usr/bin/
+	ln -s /usr/local/java/bin/* /usr/bin/
 	which java
 	java -version
 }
@@ -85,11 +85,15 @@ function install_nginx()
 	cd /usr/local/nginx/conf/
 	mv /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bak
  	wget  https://raw.githubusercontent.com/DDdark007/nginx/main/nginx.conf
+ 	cd /usr/local/nginx/conf/vhost/web/
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/admin.conf
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/down.conf
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/gateway.conf
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/web.conf
   
 	#添加开机自启
 	chmod +x /etc/rc.d/rc.local
 	echo nginx >> /etc/rc.local
-	echo -e "\e[1;31m 自行上传tio-nginx-conf.tar.gz文件 \e[0m"
 }
 
 function install_mysql8_el7()
@@ -300,6 +304,11 @@ EOF
 
   #启动数据库
   systemctl start mysqld.service
+  # 检查命令执行状态
+    if [ $? -ne 0 ]; then
+        echo "启动MySQL服务失败，正在调用失败处理函数..."
+        return          # 从当前函数返回，不再继续执行
+    fi
   systemctl enable mysqld.service
   sleep 3
   MYSQL_TEMP_PWD=$(grep "temporary password" ${MYSQL_HOME}/log/mysqld.log|cut -d "@" -f 2|awk '{print $2}')
@@ -421,8 +430,28 @@ tar xf mongosh-1.6.0-linux-x64.tgz
 cp -r mongosh-1.6.0-linux-x64/bin/mongosh /usr/local/mongodb/bin/
 source /etc/profile
 
-# 启动
-mongod --config /usr/local/mongodb/config/mongodb.conf
+# 启动 MongoDB 服务
+    mongod --config /usr/local/mongodb/config/mongodb.conf
+
+    # 等待一段时间，确保 MongoDB 启动完成
+    sleep 5
+
+    # 创建 root 用户
+    echo "Creating root user..."
+    mongosh --port 27017 <<EOF
+    use admin
+    db.createRole({
+      role: "root",
+      privileges: [],
+      roles: ["root"]
+    });
+    db.createUser({
+      user: "root",
+      pwd: "5bPoMu3tFdnrQQ90",
+      roles: [{role: "root", db: "admin"}]
+    });
+EOF
+    echo "MongoDB root user created successfully."
 }
 install_java8
 #install_java11

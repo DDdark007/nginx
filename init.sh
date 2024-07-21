@@ -315,12 +315,12 @@ main()
 			localeset
 			selinuxset
 			firewalldset
-			chkset
+			#chkset
 			limitset
 			yumset
 			kernelset
 			sshset
-			restartset
+			#restartset
 			ntpdateset
 			historyset
 			;;
