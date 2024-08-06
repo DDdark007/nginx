@@ -94,6 +94,18 @@ function install_nginx()
 	#添加开机自启
 	chmod +x /etc/rc.d/rc.local
 	echo nginx >> /etc/rc.local
+
+ 	# 添加toa模块
+  	uname -r
+	yum install -y kernel-devel-`uname -r`
+
+	wget http://toa.hk.ufileos.com/linux_toa.tar.gz
+	tar -zxvf linux_toa.tar.gz
+	cd linux_toa
+	make
+	mv toa.ko /lib/modules/`uname -r`/kernel/net/netfilter/ipvs/toa.ko
+	insmod /lib/modules/`uname -r`/kernel/net/netfilter/ipvs/toa.ko
+	lsmod |grep toa
 }
 
 function install_mysql8_el7()
