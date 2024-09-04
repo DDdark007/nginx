@@ -148,11 +148,17 @@ optimize_history() {
     echo "========================history优化========================"
     if ! grep -q "HISTTIMEFORMAT" /etc/profile; then
         cat <<'EOF' >> /etc/profile
-# 设置history格式
-export HISTTIMEFORMAT="[%Y-%m-%d %H:%M:%S] [`whoami`] [`who am i | awk '{print $NF}' | sed -r 's#[()]##g'`]: "
-# 记录shell执行的每一条命令
-export PROMPT_COMMAND='
-if [ -z "$OLD_PWD" ];then
+# 获取登录时的IP并存储到变量 LOGIN_IP 中，只在首次登录时获取
+if [ -z "$LOGIN_IP" ]; then
+    export LOGIN_IP=$(who am i | awk '{print $NF}' | sed -r 's/[()]//g')
+fi
+
+# 设置历史命令格式，包含时间、用户、登录IP
+export HISTTIMEFORMAT="[%Y-%m-%d %H:%M:%S] [`whoami`] [$LOGIN_IP]: "
+
+# 记录shell执行的每一条命令以及目录变更
+export PROMPT_COMMAND='\
+if [ -z "$OLD_PWD" ]; then
     export OLD_PWD=$PWD;
 fi;
 if [ ! -z "$LAST_CMD" ] && [ "$(history 1)" != "$LAST_CMD" ]; then
