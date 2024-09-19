@@ -146,32 +146,47 @@ EOF
 # 优化命令历史记录
 optimize_history() {
     echo "========================history优化========================"
-    if ! grep -q "HISTTIMEFORMAT" /etc/profile; then
-        cat <<'EOF' >> /etc/profile
-# 获取登录时的IP并存储到变量 LOGIN_IP 中，只在首次登录时获取
+    chk_his=$(grep -c "HISTTIMEFORMAT" /etc/profile)
+
+# 如果尚未配置历史记录时间和登录IP格式
+if [ $chk_his -eq 0 ]; then
+    cat >> /etc/profile <<'EOF'
+
+# 为每个登录会话记录IP，只在首次登录时设置
 if [ -z "$LOGIN_IP" ]; then
     export LOGIN_IP=$(who am i | awk '{print $NF}' | sed -r 's/[()]//g')
 fi
 
-# 设置历史命令格式，包含时间、用户、登录IP
-export HISTTIMEFORMAT="[%Y-%m-%d %H:%M:%S] [`whoami`] [$LOGIN_IP]: "
+# 设置历史命令格式，包含时间、用户、登录IP，避免重复设置
+if [ -z "$HISTTIMEFORMAT_SET" ]; then
+    export HISTTIMEFORMAT="[%Y-%m-%d %H:%M:%S] [`whoami`] [$LOGIN_IP]: "
+    export HISTTIMEFORMAT_SET=1  # 标记已设置
+fi
 
-# 记录shell执行的每一条命令以及目录变更
-export PROMPT_COMMAND='\
-if [ -z "$OLD_PWD" ]; then
-    export OLD_PWD=$PWD;
-fi;
-if [ ! -z "$LAST_CMD" ] && [ "$(history 1)" != "$LAST_CMD" ]; then
-    logger -t `whoami`_shell_dir "[$OLD_PWD]$(history 1)";
-fi;
-export LAST_CMD="$(history 1)";
-export OLD_PWD=$PWD;'
+# 记录shell执行的每一条命令以及目录变更，避免重复设置
+if [ -z "$PROMPT_COMMAND_SET" ]; then
+    export PROMPT_COMMAND='\
+    if [ -z "$OLD_PWD" ]; then
+        export OLD_PWD=$PWD;
+    fi;
+    if [ ! -z "$LAST_CMD" ] && [ "$(history 1)" != "$LAST_CMD" ]; then
+        logger -t `whoami`_shell_dir "[$OLD_PWD]$(history 1)";
+    fi;
+    export LAST_CMD="$(history 1)";
+    export OLD_PWD=$PWD;'
+    export PROMPT_COMMAND_SET=1  # 标记已设置
+fi
+
 EOF
-        source /etc/profile
-        echo "history优化已完成"
-    else
-        echo "history已优化"
-    fi
+
+    # 重新加载 /etc/profile 使更改立即生效
+    source /etc/profile
+else
+    echo "优化项已存在。"
+fi
+
+# 打印提示
+action "完成history优化" /bin/true
     echo "==========================================================="
     sleep 2
 }
