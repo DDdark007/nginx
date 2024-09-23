@@ -1,9 +1,7 @@
 #!/bin/bash
 . /etc/rc.d/init.d/functions
 #mysql
-MYSQL_HOME=/data
 MYSQL_PWD=oNzQsS4Has3GC6PL
-MYSQL_PORT=32060
 mycnfid=1
 function install_java8()
 {
@@ -87,17 +85,17 @@ function install_nginx()
 	
 	mkdir -p /usr/local/nginx/conf/vhost/{web,default}
 	cd /usr/local/nginx/conf/vhost/default
-	wget https://raw.githubusercontent.com/DDdark007/nginx/main/default.conf
+	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/default.conf
 	
 	#修改配置文件
 	cd /usr/local/nginx/conf/
 	mv /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bak
- 	wget  https://raw.githubusercontent.com/DDdark007/nginx/main/nginx.conf
+ 	wget  https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/nginx.conf
  	cd /usr/local/nginx/conf/vhost/web/
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/admin.conf
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/down.conf
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/gateway.conf
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/main/web.conf
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/admin.conf
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/down.conf
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/gateway.conf
+ 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/web.conf
   
 	#添加开机自启
 	chmod +x /etc/rc.d/rc.local
@@ -208,10 +206,10 @@ function install_mysql8_el7()
   cp /etc/my.cnf /etc/my.cnf_${DATE}bak &>/dev/null
 if [ "$mycnfid" -eq 1 ]; then
     # 如果mycnfid等于1，使用配置文件1
-    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/images_proxy
+    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/sql45g.conf
 else
     # 如果mycnfid不等于1，使用配置文件2
-    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/images_proxy
+    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/sql6g.conf
 fi
 
   #启动数据库
