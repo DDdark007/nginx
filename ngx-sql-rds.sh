@@ -221,7 +221,7 @@ fi
     fi
   systemctl enable mysqld.service
   sleep 3
-  MYSQL_TEMP_PWD=$(grep "temporary password" ${MYSQL_HOME}/log/mysqld.log|cut -d "@" -f 2|awk '{print $2}')
+  MYSQL_TEMP_PWD=$(grep "temporary password" /data/log/mysqld.log|cut -d "@" -f 2|awk '{print $2}')
   MYSQL_TEMP_PWD_old=0AQGW6sGTLx#
   #mysql 8密码策略validate_password_policy 变为validate_password.policy
   #MYSQL 8.0内新增加mysql_native_password函数，通过更改这个函数密码来进行远程连接
@@ -231,7 +231,7 @@ fi
   mysql -hlocalhost  -P${MYSQL_PORT}  -uroot -p"${MYSQL_PWD}" -e "use mysql;select host,user from user;update user set host='%' where user='root';flush privileges;select host,user from user;"  --connect-expired-password
   echo -e "\033[33m************************************************完成mysql8.0数据库部署***********************************************\033[0m"
 cat > /tmp/mysql8.log  << EOF
-mysql安装目录：${MYSQL_HOME}
+mysql安装目录：/data
 mysql版本：Mysql-8.0
 mysql端口：${MYSQL_PORT}
 mysql密码：${MYSQL_PWD}
