@@ -155,8 +155,8 @@ function install_mysql8_el7()
   echo -e "\033[33m***************************************************自动部署mysql8.0**************************************************\033[0m"
   #建用户及目录
   groupadd -r mysql && useradd -r -g mysql mysql -d /home/mysql -m
-  mkdir -vp $MYSQL_HOME/datafile &&  mkdir -vp $MYSQL_HOME/log &&  mkdir -vp $MYSQL_HOME/backup
-  chown -R mysql:mysql $MYSQL_HOME && chmod -R 755 $MYSQL_HOME
+  mkdir -vp /data/datafile &&  mkdir -vp /data/log &&  mkdir -vp /data/backup
+  chown -R mysql:mysql /data && chmod -R 755 /data
 
   #关闭selinux
   setenforce 0
