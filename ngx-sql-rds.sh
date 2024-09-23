@@ -206,10 +206,10 @@ function install_mysql8_el7()
   cp /etc/my.cnf /etc/my.cnf_${DATE}bak &>/dev/null
 if [ "$mycnfid" -eq 1 ]; then
     # 如果mycnfid等于1，使用配置文件1
-    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/sql45g.conf
+    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/sql45g.conf
 else
     # 如果mycnfid不等于1，使用配置文件2
-    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/sql6g.conf
+    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/sql6g.conf
 fi
 
   #启动数据库
