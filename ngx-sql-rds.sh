@@ -4,6 +4,7 @@
 MYSQL_HOME=/data
 MYSQL_PWD=oNzQsS4Has3GC6PL
 MYSQL_PORT=32060
+mycnfid=1
 function install_java8()
 {
 	echo -e "\033[33m***************************************************自动部署JDK-8**************************************************\033[0m"
@@ -33,6 +34,13 @@ EOF
 	ln -s /usr/local/java/bin/* /usr/bin/
 	which java
 	java -version
+}
+function install_im_bs_upload_jdk17()
+{
+	echo -e "\033[33m***************************************************自动部署JDK-17**************************************************\033[0m"
+	wget https://corretto.aws/downloads/latest/amazon-corretto-17-x64-linux-jdk.tar.gz
+	tar xf amazon-corretto-17-x64-linux-jdk.tar.gz
+	mv amazon-corretto-17.0.12.7.1-linux-x64 /usr/local/jdk17
 }
 # nginx
 function install_nginx()
@@ -93,12 +101,12 @@ function install_nginx()
   
 	#添加开机自启
 	chmod +x /etc/rc.d/rc.local
-	echo nginx >> /etc/rc.local
+	echo /usr/local/nginx/sbin/nginx >> /etc/rc.local
 
  	# 添加toa模块
   	uname -r
 	yum install -y kernel-devel-`uname -r`
-
+  cd /opt
 	wget http://toa.hk.ufileos.com/linux_toa.tar.gz
 	tar -zxvf linux_toa.tar.gz
 	cd linux_toa
@@ -107,7 +115,41 @@ function install_nginx()
 	insmod /lib/modules/`uname -r`/kernel/net/netfilter/ipvs/toa.ko
 	lsmod |grep toa
 }
+function install_im_go_mmproxy()
+{
+	echo -e "\033[33m***************************************************自动部署go-mmproxy**************************************************\033[0m"
+	yum update -y
+	amazon-linux-extras install epel -y
+	yum install golang -y
+	go install github.com/path-network/go-mmproxy@latest
+	cp -r /root/go/bin/go-mmproxy /usr/bin/
+cat >> /etc/systemd/system/go-mmproxy.service << EOF
+[Unit]
+Description=go-mmproxy service
+After=network.target
 
+[Service]
+Type=simple
+User=root
+LimitNOFILE=65535
+ExecStartPost=/sbin/ip rule add from 127.0.0.1/8 iif lo table 123
+ExecStartPost=/sbin/ip route add local 0.0.0.0/0 dev lo table 123
+ExecStart=/usr/bin/go-mmproxy -4 127.0.0.1:9326 -l 0.0.0.0:39326
+ExecStopPost=/sbin/ip rule del from 127.0.0.1/8 iif lo table 123
+ExecStopPost=/sbin/ip route del local 0.0.0.0/0 dev lo table 123
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl start go-mmproxy.service
+systemctl status go-mmproxy.service
+systemctl enable go-mmproxy.service
+
+netstat -tnlp | grep 39326
+}
 function install_mysql8_el7()
 {
 
@@ -164,155 +206,13 @@ function install_mysql8_el7()
 
   #配置my.cnf
   cp /etc/my.cnf /etc/my.cnf_${DATE}bak &>/dev/null
-cat << EOF > /etc/my.cnf
-[client]
-port	= ${MYSQL_PORT}
-
-[mysql]
-prompt = "\u@mysqldb \R:\m:\s [\d]> "
-no_auto_rehash
-loose-skip-binary-as-hex
-
-[mysqld]
-user	= mysql
-port	= ${MYSQL_PORT}
-bind_address=0.0.0.0
-lower_case_table_names=1
-skip-name-resolve
-sql_mode=STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
-#主从复制或MGR集群中，server_id记得要不同
-#另外，实例启动时会生成 auto.cnf，里面的 server_uuid 值也要不同
-#server_uuid的值还可以自己手动指定，只要符合uuid的格式标准就可以
-server_id = 3306
-datadir	= ${MYSQL_HOME}/datafile
-character_set_server = UTF8MB4
-skip_name_resolve = 1
-#若你的MySQL数据库主要运行在境外，请务必根据实际情况调整本参数
-default_time_zone = "+8:00"
-#启用admin_port，连接数爆满等紧急情况下给管理员留个后门
-admin_address = '127.0.0.1'
-admin_port = 33062
-
-default_authentication_plugin=mysql_native_password
-#performance setttings
-lock_wait_timeout = 3600
-open_files_limit    = 65535
-back_log = 1024
-max_connections = 1000
-max_connect_errors = 1000000
-table_open_cache = 1024
-table_definition_cache = 1024
-thread_stack = 512K
-sort_buffer_size = 16M
-join_buffer_size = 8M
-read_buffer_size = 8M
-read_rnd_buffer_size = 16M
-bulk_insert_buffer_size = 64M
-thread_cache_size = 768
-interactive_timeout = 36000
-wait_timeout = 36000
-tmp_table_size = 64M
-max_heap_table_size = 128M
-
-#log settings
-log_timestamps = SYSTEM
-log_output=table,File
-log_error = ${MYSQL_HOME}/log/mysqld.log
-log_error_verbosity = 3
-slow_query_log = 1
-log_slow_extra = 1
-slow_query_log_file = ${MYSQL_HOME}/log/slow.log
-long_query_time = 10
-log_queries_not_using_indexes = 1
-log_throttle_queries_not_using_indexes = 60
-min_examined_row_limit = 100
-log_slow_admin_statements = 1
-log_slow_slave_statements = 1
-log_bin = ${MYSQL_HOME}/log/mysql-bin.log
-binlog_format = ROW
-sync_binlog = 0 #MGR环境中由其他节点提供容错性，可不设置双1以提高本地节点性能
-binlog_cache_size = 4M
-max_binlog_cache_size = 2G
-max_binlog_size = 1G
-binlog_rows_query_log_events = 1
-binlog_expire_logs_seconds = 604800
-#MySQL 8.0.22前，想启用MGR的话，需要设置binlog_checksum=NONE才行
-binlog_checksum = none
-gtid_mode = OFF
-enforce_gtid_consistency = OFF
-
-#myisam settings
-key_buffer_size = 512M
-myisam_sort_buffer_size = 64M
-
-#replication settings
-relay_log_recovery = 1
-slave_parallel_type = LOGICAL_CLOCK
-slave_parallel_workers = 32 #可以设置为逻辑CPU数量的2倍
-innodb_thread_concurrency = 16
-binlog_transaction_dependency_tracking = WRITESET
-slave_preserve_commit_order = 1
-slave_checkpoint_period = 2
-replication_optimize_for_static_plugin_config = ON
-replication_sender_observe_commit_only = ON
-
-#innodb settings
-transaction_isolation = READ-COMMITTED
-innodb_buffer_pool_size = 22528M
-innodb_buffer_pool_instances = 8
-innodb_data_file_path = ibdata1:12M;ibdata2:1G:autoextend
-innodb_flush_log_at_trx_commit = 2 #MGR环境中由其他节点提供容错性，可不设置双1以提高本地节点性能
-innodb_log_buffer_size = 32M
-innodb_log_file_size = 1G #如果线上环境的TPS较高，建议加大至1G以上，如果压力不大可以调小
-innodb_log_files_in_group = 3
-innodb_max_undo_log_size = 4G
-# 根据您的服务器IOPS能力适当调整
-# 一般配普通SSD盘的话，可以调整到 10000 - 20000
-# 配置高端PCIe SSD卡的话，则可以调整的更高，比如 50000 - 80000
-innodb_io_capacity = 10000
-innodb_io_capacity_max = 20000
-innodb_open_files = 65535
-innodb_flush_method = O_DIRECT
-innodb_lru_scan_depth = 4000
-innodb_lock_wait_timeout = 10
-innodb_rollback_on_timeout = 1
-innodb_print_all_deadlocks = 1
-innodb_online_alter_log_max_size = 4G
-innodb_print_ddl_logs = 1
-innodb_status_file = 1
-#注意: 开启 innodb_status_output & innodb_status_output_locks 后, 可能会导致log_error文件增长较快
-innodb_status_output = 0
-innodb_status_output_locks = 1
-innodb_sort_buffer_size = 67108864
-innodb_adaptive_hash_index = OFF
-#提高索引统计信息精确度
-innodb_stats_persistent_sample_pages = 500
-
-#innodb monitor settings
-innodb_monitor_enable = "module_innodb"
-innodb_monitor_enable = "module_server"
-innodb_monitor_enable = "module_dml"
-innodb_monitor_enable = "module_ddl"
-innodb_monitor_enable = "module_trx"
-innodb_monitor_enable = "module_os"
-innodb_monitor_enable = "module_purge"
-innodb_monitor_enable = "module_log"
-innodb_monitor_enable = "module_lock"
-innodb_monitor_enable = "module_buffer"
-innodb_monitor_enable = "module_index"
-innodb_monitor_enable = "module_ibuf_system"
-innodb_monitor_enable = "module_buffer_page"
-#innodb_monitor_enable = "module_adaptive_hash"
-
-#pfs settings
-performance_schema = 1
-#performance_schema_instrument = '%memory%=on'
-loose-performance_schema_instrument = '%lock%=on'
-skip_ssl
-
-[mysqldump]
-quick
-EOF
+if [ "$mycnfid" -eq 1 ]; then
+    # 如果mycnfid等于1，使用配置文件1
+    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/images_proxy
+else
+    # 如果mycnfid不等于1，使用配置文件2
+    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/images_proxy
+fi
 
   #启动数据库
   systemctl start mysqld.service
@@ -465,10 +365,25 @@ source /etc/profile
 EOF
     echo "MongoDB root user created successfully."
 }
+function install_danji()
+{
+	install_java8
+	install_im_bs_upload_jdk17
+	install_nginx
+	install_im_go_mmproxy
+	install_mysql8_el7
+	install_redis
+	install_es
+	install_mangodb
+
+}
 install_java8
 #install_java11
+install_im_bs_upload_jdk17
 install_nginx
+install_im_go_mmproxy
 install_mysql8_el7
 install_redis
 install_es
 install_mangodb
+install_danji
