@@ -6,9 +6,9 @@ mycnfid=1
 function install_java8()
 {
 	echo -e "\033[33m***************************************************自动部署JDK-8**************************************************\033[0m"
-	wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie"  http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz
-	tar xf jdk-8u131-linux-x64.tar.gz -C /usr/local/
-	mv /usr/local/jdk1.8.0_131/ /usr/local/java
+	wget https://corretto.aws/downloads/latest/amazon-corretto-8-x64-linux-jdk.tar.gz
+ 	tar xf amazon-corretto-8-x64-linux-jdk.tar.gz -C /usr/local/
+	mv /usr/local/amazon-corretto-8.432.06.1-linux-x64/ /usr/local/java
 	cat >> /etc/profile <<EOF
 JAVA_HOME=/usr/local/java
 PATH=$PATH:$JAVA_HOME/bin
@@ -23,7 +23,7 @@ function install_java11()
 	echo -e "\033[33m***************************************************自动部署JDK-11**************************************************\033[0m"
 	wget https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz
 	tar xf amazon-corretto-11-x64-linux-jdk.tar.gz -C /usr/local/
-	mv /usr/local/amazon-corretto-11.0.18.10.1-linux-x64 /usr/local/java
+	mv /usr/local/amazon-corretto-11.0.25.9.1-linux-x64 /usr/local/java
 	cat >> /etc/profile <<EOF
 JAVA_HOME=/usr/local/java
 PATH=$PATH:$JAVA_HOME/bin
@@ -38,7 +38,7 @@ function install_im_bs_upload_jdk17()
 	echo -e "\033[33m***************************************************自动部署JDK-17**************************************************\033[0m"
 	wget https://corretto.aws/downloads/latest/amazon-corretto-17-x64-linux-jdk.tar.gz
 	tar xf amazon-corretto-17-x64-linux-jdk.tar.gz
-	mv amazon-corretto-17.0.12.7.1-linux-x64 /usr/local/jdk17
+	mv amazon-corretto-17.0.13.11.1-linux-x64 /usr/local/jdk17
 }
 # nginx
 function install_nginx()
@@ -166,7 +166,7 @@ function install_mysql8_el7()
   if [ -f /opt/mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar ];then
       echo "*****存在mysql8安装包，无需下载*****"
   else
-      ping -c 4 app.fslgz.com >/dev/null 2>&1
+      ping -c 4 google.com >/dev/null 2>&1
       if [ $? -eq 0 ];then
   wget https://downloads.mysql.com/archives/get/p/23/file/mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar -P /opt/
       else
@@ -339,6 +339,7 @@ wget https://downloads.mongodb.com/compass/mongosh-1.6.0-linux-x64.tgz
 tar xf mongosh-1.6.0-linux-x64.tgz
 cp -r mongosh-1.6.0-linux-x64/bin/mongosh /usr/local/mongodb/bin/
 source /etc/profile
+echo "mongod --config /usr/local/mongodb/config/mongodb.conf" >> /etc/rc.local
 
 # 启动 MongoDB 服务
     mongod --config /usr/local/mongodb/config/mongodb.conf
@@ -384,4 +385,4 @@ install_mysql8_el7
 install_redis
 install_es
 install_mangodb
-install_danji
+#install_danji
