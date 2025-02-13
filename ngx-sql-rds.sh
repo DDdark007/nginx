@@ -6,9 +6,9 @@ mycnfid=1
 function install_java8()
 {
 	echo -e "\033[33m***************************************************自动部署JDK-8**************************************************\033[0m"
-	wget https://corretto.aws/downloads/latest/amazon-corretto-8-x64-linux-jdk.tar.gz
- 	tar xf amazon-corretto-8-x64-linux-jdk.tar.gz -C /usr/local/
-	mv /usr/local/amazon-corretto-8.432.06.1-linux-x64/ /usr/local/java
+	wget https://corretto.aws/downloads/resources/8.442.06.1/amazon-corretto-8.442.06.1-linux-x64.tar.gz
+ 	tar xf amazon-corretto-8.442.06.1-linux-x64.tar.gz -C /usr/local/
+	mv /usr/local/amazon-corretto-8.442.06.1-linux-x64/ /usr/local/java
 	cat >> /etc/profile <<EOF
 JAVA_HOME=/usr/local/java
 PATH=$PATH:$JAVA_HOME/bin
