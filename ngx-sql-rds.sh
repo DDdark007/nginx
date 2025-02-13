@@ -36,9 +36,9 @@ EOF
 function install_im_bs_upload_jdk17()
 {
 	echo -e "\033[33m***************************************************自动部署JDK-17**************************************************\033[0m"
-	wget https://corretto.aws/downloads/latest/amazon-corretto-17-x64-linux-jdk.tar.gz
-	tar xf amazon-corretto-17-x64-linux-jdk.tar.gz
-	mv amazon-corretto-17.0.13.11.1-linux-x64 /usr/local/jdk17
+	wget https://corretto.aws/downloads/resources/17.0.14.7.1/amazon-corretto-17.0.14.7.1-linux-x64.tar.gz
+	tar xf amazon-corretto-17.0.14.7.1-linux-x64.tar.gz
+	mv amazon-corretto-17.0.14.7.1-linux-x64 /usr/local/jdk17
 }
 # nginx
 function install_nginx()
