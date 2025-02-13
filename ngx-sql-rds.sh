@@ -21,9 +21,9 @@ EOF
 function install_java11()
 {
 	echo -e "\033[33m***************************************************自动部署JDK-11**************************************************\033[0m"
-	wget https://corretto.aws/downloads/latest/amazon-corretto-11-x64-linux-jdk.tar.gz
-	tar xf amazon-corretto-11-x64-linux-jdk.tar.gz -C /usr/local/
-	mv /usr/local/amazon-corretto-11.0.25.9.1-linux-x64 /usr/local/java
+	wget https://corretto.aws/downloads/resources/11.0.26.4.1/amazon-corretto-11.0.26.4.1-linux-x64.tar.gz
+	tar xf amazon-corretto-11.0.26.4.1-linux-x64.tar.gz -C /usr/local/
+	mv /usr/local/amazon-corretto-11.0.26.4.1-linux-x64 /usr/local/java
 	cat >> /etc/profile <<EOF
 JAVA_HOME=/usr/local/java
 PATH=$PATH:$JAVA_HOME/bin
