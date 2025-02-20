@@ -1,127 +1,185 @@
 #!/bin/bash
-. /etc/rc.d/init.d/functions
-#mysql
-MYSQL_PWD=oNzQsS4Has3GC6PL
+# 启用严格模式，保证出错时退出
+set -euo pipefail
+
+# 检查是否以 root 身份运行
+if [[ $EUID -ne 0 ]]; then
+    echo "必须以 root 身份运行该脚本."
+    exit 1
+fi
+
+# 加载系统提供的函数（如 action 等），若文件存在则加载
+[[ -f /etc/rc.d/init.d/functions ]] && . /etc/rc.d/init.d/functions
+
+# 全局变量设置
+MYSQL_PWD="oNzQsS4Has3GC6PL"
+MYSQL_PORT=32060
 mycnfid=1
-function install_java8()
-{
-	echo -e "\033[33m***************************************************自动部署JDK-8**************************************************\033[0m"
-	wget https://corretto.aws/downloads/resources/8.442.06.1/amazon-corretto-8.442.06.1-linux-x64.tar.gz
- 	tar xf amazon-corretto-8.442.06.1-linux-x64.tar.gz -C /usr/local/
-	mv /usr/local/amazon-corretto-8.442.06.1-linux-x64/ /usr/local/java
-	cat >> /etc/profile <<EOF
-JAVA_HOME=/usr/local/java
-PATH=$PATH:$JAVA_HOME/bin
+DATE=$(date +%Y%m%d%H%M%S)
+
+# 统一日志输出函数
+log_info() {
+    echo -e "\n\033[33m========== $1 ==========\033[0m"
+}
+
+# 通用下载函数（带重试及错误检查）
+download_file() {
+    local url=$1
+    local dest=${2:-.}
+    wget -q "$url" -P "$dest" || { echo "下载 $url 失败"; exit 1; }
+}
+
+#############################################
+# Java 安装相关
+#############################################
+
+install_java8() {
+    log_info "部署 JDK-8"
+    local jdk_url="https://corretto.aws/downloads/resources/8.442.06.1/amazon-corretto-8.442.06.1-linux-x64.tar.gz"
+    local tar_name="amazon-corretto-8.442.06.1-linux-x64.tar.gz"
+    # 如文件不存在则下载
+    [[ ! -f $tar_name ]] && download_file "$jdk_url"
+    tar xf "$tar_name" -C /usr/local/
+    # 移动或覆盖安装目录
+    mv -f /usr/local/amazon-corretto-8.442.06.1-linux-x64/ /usr/local/java
+    # 添加环境变量到 /etc/profile（避免重复添加）
+    if ! grep -q "JAVA_HOME=/usr/local/java" /etc/profile; then
+        cat >> /etc/profile <<EOF
+
+# Java 8 环境变量设置
+export JAVA_HOME=/usr/local/java
+export PATH=\$PATH:\$JAVA_HOME/bin
 EOF
-	source /etc/profile
-	ln -s /usr/local/java/bin/* /usr/bin/
-	which java
-	java -version
+    fi
+    source /etc/profile
+    ln -sf /usr/local/java/bin/* /usr/bin/
+    which java && java -version
 }
-function install_java11()
-{
-	echo -e "\033[33m***************************************************自动部署JDK-11**************************************************\033[0m"
-	wget https://corretto.aws/downloads/resources/11.0.26.4.1/amazon-corretto-11.0.26.4.1-linux-x64.tar.gz
-	tar xf amazon-corretto-11.0.26.4.1-linux-x64.tar.gz -C /usr/local/
-	mv /usr/local/amazon-corretto-11.0.26.4.1-linux-x64 /usr/local/java
-	cat >> /etc/profile <<EOF
-JAVA_HOME=/usr/local/java
-PATH=$PATH:$JAVA_HOME/bin
+
+install_java11() {
+    log_info "部署 JDK-11"
+    local jdk_url="https://corretto.aws/downloads/resources/11.0.26.4.1/amazon-corretto-11.0.26.4.1-linux-x64.tar.gz"
+    local tar_name="amazon-corretto-11.0.26.4.1-linux-x64.tar.gz"
+    [[ ! -f $tar_name ]] && download_file "$jdk_url"
+    tar xf "$tar_name" -C /usr/local/
+    mv -f /usr/local/amazon-corretto-11.0.26.4.1-linux-x64 /usr/local/java
+    if ! grep -q "JAVA_HOME=/usr/local/java" /etc/profile; then
+        cat >> /etc/profile <<EOF
+
+# Java 11 环境变量设置
+export JAVA_HOME=/usr/local/java
+export PATH=\$PATH:\$JAVA_HOME/bin
 EOF
-	source /etc/profile
-	ln -s /usr/local/java/bin/* /usr/bin/
-	which java
-	java -version
+    fi
+    source /etc/profile
+    ln -sf /usr/local/java/bin/* /usr/bin/
+    which java && java -version
 }
-function install_im_bs_upload_jdk17()
-{
-	echo -e "\033[33m***************************************************自动部署JDK-17**************************************************\033[0m"
-	wget https://corretto.aws/downloads/resources/17.0.14.7.1/amazon-corretto-17.0.14.7.1-linux-x64.tar.gz
-	tar xf amazon-corretto-17.0.14.7.1-linux-x64.tar.gz
-	mv amazon-corretto-17.0.14.7.1-linux-x64 /usr/local/jdk17
+
+install_im_bs_upload_jdk17() {
+    log_info "部署 JDK-17"
+    local jdk_url="https://corretto.aws/downloads/resources/17.0.14.7.1/amazon-corretto-17.0.14.7.1-linux-x64.tar.gz"
+    local tar_name="amazon-corretto-17.0.14.7.1-linux-x64.tar.gz"
+    [[ ! -f $tar_name ]] && download_file "$jdk_url"
+    tar xf "$tar_name"
+    mv -f amazon-corretto-17.0.14.7.1-linux-x64 /usr/local/jdk17
+    # 可根据需要设置环境变量（或独立管理多个JDK）
 }
-# nginx
-function install_nginx()
-{
-	echo -e "\033[33m***************************************************自动部署nginx-1.22.0**************************************************\033[0m"
-	#安装依赖
-	yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib zlib-devel openssl openssl-devel git
 
-	#下载需要编译安装的包
-	cd /usr/local/src/
-	wget https://nginx.org/download/nginx-1.22.0.tar.gz
-	wget https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz
-	git clone https://github.com/leev/ngx_http_geoip2_module.git
-	git clone https://github.com/zhouchangxun/ngx_healthcheck_module.git
-	git clone https://github.com/DDdark007/GeoLite2.git
+#############################################
+# NGINX 安装及配置
+#############################################
 
-	#解压
-	tar xf libmaxminddb-1.6.0.tar.gz
-	tar xf nginx-1.22.0.tar.gz
-	 
-	#安装 libmaxminddb
-	cd libmaxminddb-1.6.0
-	./configure
-	make
-	make install
-	ldconfig
-	sh -c "echo /usr/local/lib  >> /etc/ld.so.conf.d/local.conf"
-	ldconfig
-	 
-	#安装nginx
-	cd ../nginx-1.22.0
-	# 简易编译
-	./configure --with-http_ssl_module --with-stream --with-http_realip_module --http-client-body-temp-path=/tmp --with-http_ssl_module --with-http_v2_module --with-http_realip_module --with-http_stub_status_module --with-http_gzip_static_module --with-pcre --with-stream --with-stream_ssl_module --with-stream_realip_module --add-module=/usr/local/src/ngx_healthcheck_module --add-module=/usr/local/src/ngx_http_geoip2_module
-	make && make install
+install_nginx() {
+    log_info "部署 NGINX-1.22.0"
+    # 安装依赖包
+    yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib zlib-devel openssl openssl-devel git || { echo "安装依赖失败"; exit 1; }
 
-	#软连接
-	ln -s /usr/local/nginx/sbin/nginx /usr/bin/
-	mkdir -vp /usr/local/nginx/{geoip,data/{tio-bs-page,tio-download,tio-mg-page}}
-	mkdir -v /usr/local/nginx/conf/ssl
-	mkdir -v /home/upload/
+    # 确保源码目录存在
+    mkdir -p /usr/local/src
+    cd /usr/local/src
 
-	#部署geoip2 ip数据库
-	mv /usr/local/src/GeoLite2/* /usr/local/nginx/geoip/
-	
-	mkdir -p /usr/local/nginx/conf/vhost/{web,default}
-	cd /usr/local/nginx/conf/vhost/default
-	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/default.conf
-	
-	#修改配置文件
-	cd /usr/local/nginx/conf/
-	mv /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bak
- 	wget  https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/nginx.conf
- 	cd /usr/local/nginx/conf/vhost/web/
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/admin.conf
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/down.conf
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/gateway.conf
- 	wget https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/web.conf
-  
-	#添加开机自启
-	chmod +x /etc/rc.d/rc.local
-	echo /usr/local/nginx/sbin/nginx >> /etc/rc.local
+    # 下载 NGINX 及所需模块源码包
+    download_file "https://nginx.org/download/nginx-1.22.0.tar.gz"
+    download_file "https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz"
+    [[ ! -d ngx_http_geoip2_module ]] && git clone https://github.com/leev/ngx_http_geoip2_module.git
+    [[ ! -d ngx_healthcheck_module ]] && git clone https://github.com/zhouchangxun/ngx_healthcheck_module.git
+    [[ ! -d GeoLite2 ]] && git clone https://github.com/DDdark007/GeoLite2.git
 
- 	# 添加toa模块
-  	uname -r
-	yum install -y kernel-devel-`uname -r`
-  cd /opt
-	wget http://toa.hk.ufileos.com/linux_toa.tar.gz
-	tar -zxvf linux_toa.tar.gz
-	cd linux_toa
-	make
-	mv toa.ko /lib/modules/`uname -r`/kernel/net/netfilter/ipvs/toa.ko
-	insmod /lib/modules/`uname -r`/kernel/net/netfilter/ipvs/toa.ko
-	lsmod |grep toa
+    # 解压源码包
+    tar xf libmaxminddb-1.6.0.tar.gz
+    tar xf nginx-1.22.0.tar.gz
+
+    # 安装 libmaxminddb
+    cd libmaxminddb-1.6.0
+    ./configure && make && make install
+    ldconfig
+    echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf
+    ldconfig
+
+    # 编译安装 NGINX
+    cd ../nginx-1.22.0
+    ./configure --with-http_ssl_module --with-stream --with-http_realip_module \
+      --http-client-body-temp-path=/tmp \
+      --with-http_v2_module --with-http_stub_status_module --with-http_gzip_static_module \
+      --with-pcre --with-stream_ssl_module --with-stream_realip_module \
+      --add-module=/usr/local/src/ngx_healthcheck_module --add-module=/usr/local/src/ngx_http_geoip2_module
+    make && make install
+
+    # 建立软连接及目录结构
+    ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx
+    mkdir -p /usr/local/nginx/{geoip,data/{tio-bs-page,tio-download,tio-mg-page},conf/ssl}
+    mkdir -p /home/upload/
+    # 部署 GeoIP2 数据库（将 GeoLite2 中内容复制过去）
+    cp -r /usr/local/src/GeoLite2/* /usr/local/nginx/geoip/ 2>/dev/null || true
+
+    mkdir -p /usr/local/nginx/conf/vhost/{web,default}
+    cd /usr/local/nginx/conf/vhost/default
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/default.conf" .
+
+    cd /usr/local/nginx/conf/
+    [[ -f nginx.conf ]] && mv nginx.conf nginx.conf.bak.$DATE
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/nginx.conf" .
+    cd /usr/local/nginx/conf/vhost/web/
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/admin.conf" .
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/down.conf" .
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/gateway.conf" .
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/web.conf" .
+
+    # 添加开机自启（将 nginx 加入 /etc/rc.local）
+    chmod +x /etc/rc.d/rc.local
+    if ! grep -q "/usr/local/nginx/sbin/nginx" /etc/rc.d/rc.local; then
+        echo "/usr/local/nginx/sbin/nginx" >> /etc/rc.d/rc.local
+    fi
+
+    # 添加 TOA 模块（需安装内核开发包）
+    uname -r
+    yum install -y "kernel-devel-$(uname -r)"
+    cd /opt
+    download_file "http://toa.hk.ufileos.com/linux_toa.tar.gz"
+    tar -zxvf linux_toa.tar.gz
+    cd linux_toa
+    make
+    mv toa.ko /lib/modules/$(uname -r)/kernel/net/netfilter/ipvs/toa.ko
+    insmod /lib/modules/$(uname -r)/kernel/net/netfilter/ipvs/toa.ko
+    lsmod | grep toa
 }
-function install_im_go_mmproxy()
-{
-	echo -e "\033[33m***************************************************自动部署go-mmproxy**************************************************\033[0m"
-	yum update -y
-	amazon-linux-extras install epel -y
-	yum install golang -y
-	go install github.com/path-network/go-mmproxy@latest
-	cp -r /root/go/bin/go-mmproxy /usr/bin/
-cat >> /etc/systemd/system/go-mmproxy.service << EOF
+
+#############################################
+# go-mmproxy 部署（基于 go 安装）
+#############################################
+
+install_im_go_mmproxy() {
+    log_info "部署 go-mmproxy"
+    yum update -y
+    amazon-linux-extras install epel -y
+    yum install -y golang || { echo "安装 golang 失败"; exit 1; }
+    # 使用 go 安装最新版本
+    su - root -c "go install github.com/path-network/go-mmproxy@latest"
+    # 默认 go 安装路径为 /root/go/bin/
+    cp -f /root/go/bin/go-mmproxy /usr/bin/
+    # 创建 systemd 服务
+    cat > /etc/systemd/system/go-mmproxy.service << 'EOF'
 [Unit]
 Description=go-mmproxy service
 After=network.target
@@ -141,169 +199,182 @@ RestartSec=10s
 [Install]
 WantedBy=multi-user.target
 EOF
-
-systemctl start go-mmproxy.service
-systemctl status go-mmproxy.service
-systemctl enable go-mmproxy.service
-
-netstat -tnlp | grep 39326
+    systemctl daemon-reload
+    systemctl start go-mmproxy.service
+    systemctl enable go-mmproxy.service
+    netstat -tnlp | grep 39326 || echo "go-mmproxy 可能未正常启动"
 }
-function install_mysql8_el7()
-{
 
-  echo ""
-  echo -e "\033[33m***************************************************自动部署mysql8.0**************************************************\033[0m"
-  #建用户及目录
-  groupadd -r mysql && useradd -r -g mysql mysql -d /home/mysql -m
-  mkdir -vp /data/datafile &&  mkdir -vp /data/log &&  mkdir -vp /data/backup
-  chown -R mysql:mysql /data && chmod -R 755 /data
+#############################################
+# MySQL 8 安装及配置（适用于 EL7）
+#############################################
 
-  #关闭selinux
-  setenforce 0
-  sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+install_mysql8_el7() {
+    log_info "部署 MySQL 8.0"
+    # 创建 mysql 用户及目录
+    groupadd -r mysql 2>/dev/null || true
+    useradd -r -g mysql mysql -d /home/mysql -m 2>/dev/null || true
+    mkdir -p /data/{datafile,log,backup}
+    chown -R mysql:mysql /data
+    chmod -R 755 /data
 
-  #下载包
-  if [ -f /opt/mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar ];then
-      echo "*****存在mysql8安装包，无需下载*****"
-  else
-      ping -c 4 google.com >/dev/null 2>&1
-      if [ $? -eq 0 ];then
-  wget https://downloads.mysql.com/archives/get/p/23/file/mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar -P /opt/
-      else
-        echo "please download mysql8 package manual !"
-    exit $?
-      fi
-  fi
+    # 关闭 SELinux
+    setenforce 0 || true
+    sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
 
-  #配yum安装mysql依赖包
-  rpm -qa|grep libaio-devel
-  if [ $? -eq 1 ];then
-    yum install -y gcc gcc-c++ openssl openssl-devel libaio libaio-devel  ncurses  ncurses-devel &>/dev/null
-    action "***************安装mysql依赖包完成***************" /bin/true
+    # 下载 MySQL 安装包（如果不存在则下载）
+    cd /opt
+    local mysql_tar="mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar"
+    if [[ ! -f $mysql_tar ]]; then
+        if ping -c 4 google.com &>/dev/null; then
+            download_file "https://downloads.mysql.com/archives/get/p/23/file/$mysql_tar" "/opt"
+        else
+            echo "无法连接网络，请手动下载 MySQL 包！"
+            exit 1
+        fi
     else
-      action "****************已安装mysql依赖包****************" /bin/false
-  fi
-
-  #安装mysql8.0
-  ps -ef|grep mysqld |grep -v grep | grep root
-  if [ $? -eq 0 ] ;then
-     echo "*****************已存在mysql进程*****************"
-     exit $?
-  else
-   # 卸载 mysql
-     rpm -qa|grep mysql|xargs -i rpm -e --nodeps {}
-     # uninstall mariadb-libs
-     rpm -qa|grep mariadb|xargs -i rpm -e --nodeps {}
-     # 安装mysql
-     action "***************开始安装mysql数据库***************" /bin/true
-     cd /opt
-     tar -xvf mysql-8.2.0-1.el7.x86_64.rpm-bundle.tar -C /opt/  &>/dev/null
-     yum install *.rpm -y
-     cd /root/
-  fi
-
-  #配置my.cnf
-  cp /etc/my.cnf /etc/my.cnf_${DATE}bak &>/dev/null
-if [ "$mycnfid" -eq 1 ]; then
-    # 如果mycnfid等于1，使用配置文件1
-    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/sql45g.conf
-else
-    # 如果mycnfid不等于1，使用配置文件2
-    wget -O /etc/my.cnf https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/sql6g.conf
-fi
-
-  #启动数据库
-  systemctl start mysqld.service
-  # 检查命令执行状态
-    if [ $? -ne 0 ]; then
-        echo "启动MySQL服务失败，正在调用失败处理函数..."
-        return          # 从当前函数返回，不再继续执行
+        echo "MySQL 安装包已存在，跳过下载"
     fi
-  systemctl enable mysqld.service
-  sleep 3
-  MYSQL_TEMP_PWD=$(grep "temporary password" /data/log/mysqld.log|cut -d "@" -f 2|awk '{print $2}')
-  MYSQL_TEMP_PWD_old=0AQGW6sGTLx#
-  #mysql 8密码策略validate_password_policy 变为validate_password.policy
-  #MYSQL 8.0内新增加mysql_native_password函数，通过更改这个函数密码来进行远程连接
-  mysql -hlocalhost  -P${MYSQL_PORT}  -uroot -p"${MYSQL_TEMP_PWD}" -e "alter user 'root'@'localhost' identified by '${MYSQL_TEMP_PWD_old}';" --connect-expired-password
-  mysql -hlocalhost  -P${MYSQL_PORT}  -uroot -p"${MYSQL_TEMP_PWD_old}" -e "set global validate_password.policy=0" --connect-expired-password
-  mysql -hlocalhost  -P${MYSQL_PORT}  -uroot -p"${MYSQL_TEMP_PWD_old}" -e "alter user 'root'@'localhost' identified by '${MYSQL_PWD}';"  --connect-expired-password
-  mysql -hlocalhost  -P${MYSQL_PORT}  -uroot -p"${MYSQL_PWD}" -e "use mysql;select host,user from user;update user set host='%' where user='root';flush privileges;select host,user from user;"  --connect-expired-password
-  echo -e "\033[33m************************************************完成mysql8.0数据库部署***********************************************\033[0m"
-cat > /tmp/mysql8.log  << EOF
-mysql安装目录：/data
-mysql版本：Mysql-8.0
-mysql端口：${MYSQL_PORT}
-mysql密码：${MYSQL_PWD}
+
+    # 安装依赖包（若尚未安装）
+    if ! rpm -qa | grep -q libaio-devel; then
+        yum install -y gcc gcc-c++ openssl openssl-devel libaio libaio-devel ncurses ncurses-devel &>/dev/null
+        action "安装 MySQL 依赖包完成" /bin/true
+    else
+        action "MySQL 依赖包已安装" /bin/true
+    fi
+
+    # 检查是否已有 mysqld 进程在运行
+    if pgrep mysqld &>/dev/null; then
+        echo "检测到已有 mysqld 进程，跳过安装 MySQL"
+        return
+    fi
+
+    # 卸载可能冲突的 mysql 或 mariadb 组件
+    rpm -qa | grep mysql | xargs -r rpm -e --nodeps
+    rpm -qa | grep mariadb | xargs -r rpm -e --nodeps
+
+    # 解包并安装 MySQL
+    tar -xf "$mysql_tar" -C /opt/
+    yum install -y /opt/*.rpm
+    cd ~
+
+    # 备份原有 my.cnf 文件
+    [[ -f /etc/my.cnf ]] && cp /etc/my.cnf /etc/my.cnf.bak.$DATE
+
+    # 根据 mycnfid 选择配置文件
+    if [ "$mycnfid" -eq 1 ]; then
+        download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/sql45g.conf" /etc
+        mv /etc/sql45g.conf /etc/my.cnf
+    else
+        download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/sql6g.conf" /etc
+        mv /etc/sql6g.conf /etc/my.cnf
+    fi
+
+    # 启动 MySQL 服务
+    systemctl start mysqld.service
+    if ! systemctl is-active mysqld.service &>/dev/null; then
+        echo "启动 MySQL 服务失败"
+        return
+    fi
+    systemctl enable mysqld.service
+    sleep 3
+
+    # 从日志中获取临时密码，并更新密码及相关配置
+    MYSQL_TEMP_PWD=$(grep "temporary password" /data/log/mysqld.log | tail -1 | awk '{print $NF}')
+    local new_temp_pwd="0AQGW6sGTLx#"
+    mysql -hlocalhost -P${MYSQL_PORT} -uroot -p"${MYSQL_TEMP_PWD}" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${new_temp_pwd}';"
+    mysql -hlocalhost -P${MYSQL_PORT} -uroot -p"${new_temp_pwd}" --connect-expired-password -e "SET GLOBAL validate_password.policy=0;"
+    mysql -hlocalhost -P${MYSQL_PORT} -uroot -p"${new_temp_pwd}" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_PWD}';"
+    mysql -hlocalhost -P${MYSQL_PORT} -uroot -p"${MYSQL_PWD}" --connect-expired-password -e "USE mysql; UPDATE user SET host='%' WHERE user='root'; FLUSH PRIVILEGES;"
+    echo -e "\033[33mMySQL 8.0 部署完成\033[0m"
+    cat > /tmp/mysql8.log <<EOF
+MySQL 安装目录：/data
+MySQL 版本：MySQL 8.0
+MySQL 端口：${MYSQL_PORT}
+MySQL 密码：${MYSQL_PWD}
 EOF
-  cat /tmp/mysql8.log
-  echo -e "\e[1;31m 以上信息保存在/tmp/mysql8.log文件下 \e[0m"
-  echo -e "\033[33m*********************************************************************************************************************\033[0m"
-  echo ""
-  sleep 3
+    echo "MySQL 安装信息保存在 /tmp/mysql8.log"
+    sleep 3
 }
-function install_redis()
-{
-	# 安装依赖
-	yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib zlib-devel openssl openssl-devel git
 
-	cd
+#############################################
+# Redis 安装及配置
+#############################################
 
-	# 下载redis编译包
-	wget http://download.redis.io/releases/redis-6.2.6.tar.gz
-
-	# 解压
-	tar xf redis-6.2.6.tar.gz
-	cd redis-6.2.6
-
-	# 编译
-	make && make PREFIX=/usr/local/redis install
-	mkdir /usr/local/redis/{data,conf,log} -p
-	cd /usr/local/redis/conf
-	wget https://raw.githubusercontent.com/DDdark007/redis_conf/main/redis.conf
-
-	ln -s /usr/local/redis/bin/redis-server /usr/bin/
-	ln -s /usr/local/redis/bin/redis-cli /usr/bin/
-
-	# 启动
-	redis-server /usr/local/redis/conf/redis.conf
-	echo "redis-server /usr/local/redis/conf/redis.conf" >> /etc/rc.local
-	echo -e "\033[33m************************************************完成redis6.2数据库部署***********************************************\033[0m"
-	echo "redis密码"
-	cat -n /usr/local/redis/conf/redis.conf | grep requirepass | grep -Ev "#"
-	echo -e "\033[33m*******************************************************************************************************************\033[0m"
+install_redis() {
+    log_info "部署 Redis 6.2.6"
+    yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib zlib-devel openssl openssl-devel git
+    cd /root
+    local redis_tar="redis-6.2.6.tar.gz"
+    [[ ! -f $redis_tar ]] && download_file "http://download.redis.io/releases/$redis_tar"
+    tar xf "$redis_tar"
+    cd redis-6.2.6
+    make && make PREFIX=/usr/local/redis install
+    mkdir -p /usr/local/redis/{data,conf,log}
+    cd /usr/local/redis/conf
+    download_file "https://raw.githubusercontent.com/DDdark007/redis_conf/main/redis.conf"
+    ln -sf /usr/local/redis/bin/redis-server /usr/bin/redis-server
+    ln -sf /usr/local/redis/bin/redis-cli /usr/bin/redis-cli
+    # 启动 Redis 并添加开机自启
+    redis-server /usr/local/redis/conf/redis.conf &
+    if ! grep -q "redis-server /usr/local/redis/conf/redis.conf" /etc/rc.d/rc.local; then
+        echo "redis-server /usr/local/redis/conf/redis.conf" >> /etc/rc.d/rc.local
+    fi
+    echo -e "\033[33mRedis 部署完成\033[0m"
+    echo "Redis 密码配置："
+    grep -E "^[[:space:]]*requirepass" /usr/local/redis/conf/redis.conf || echo "未设置密码"
 }
-function install_es()
-{
-	cd
-	wget https://artifacts.elastic.co/downloads/kibana/kibana-8.6.2-x86_64.rpm
-	wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.6.2-x86_64.rpm
-	yum install elasticsearch-8.6.2-x86_64.rpm -y
-	yum install kibana-8.6.2-x86_64.rpm -y
-	mv /etc/elasticsearch/elasticsearch.yml /etc/elasticsearch/elasticsearch.ymlbak
-	cd /etc/elasticsearch/
-	wget https://raw.githubusercontent.com/DDdark007/redis_conf/main/elasticsearch.yml
-	cd /etc/kibana
-	mv kibana.yml kibana.ymlbak
-	wget https://raw.githubusercontent.com/DDdark007/redis_conf/main/kibana.yml
-	systemctl start kibana elasticsearch
-	systemctl enable kibana elasticsearch
-	curl -XGET 'http://localhost:9200/_cluster/health?pretty'
-}
-function install_mangodb()
-{
-	# 下载并解压 MongoDB
-wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-rhel70-7.0.1.tgz
-tar xf mongodb-linux-x86_64-rhel70-7.0.1.tgz
-mv mongodb-linux-x86_64-rhel70-7.0.1 /usr/local/mongodb
 
-# 创建配置和数据目录
-mkdir -p /usr/local/mongodb/config /data/mongodb/{logs,data,pid}
-cat << EOF > /usr/local/mongodb/config/mongodb.conf
+#############################################
+# Elasticsearch 与 Kibana 部署
+#############################################
+
+install_es() {
+    log_info "部署 Elasticsearch & Kibana 8.6.2"
+    cd /root
+    download_file "https://artifacts.elastic.co/downloads/kibana/kibana-8.6.2-x86_64.rpm"
+    download_file "https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-8.6.2-x86_64.rpm"
+    yum install -y elasticsearch-8.6.2-x86_64.rpm
+    yum install -y kibana-8.6.2-x86_64.rpm
+    # 替换配置文件
+    [[ -f /etc/elasticsearch/elasticsearch.yml ]] && mv /etc/elasticsearch/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml.bak.$DATE
+    cd /etc/elasticsearch/
+    download_file "https://raw.githubusercontent.com/DDdark007/redis_conf/main/elasticsearch.yml" .
+    cd /etc/kibana
+    [[ -f kibana.yml ]] && mv kibana.yml kibana.yml.bak.$DATE
+    download_file "https://raw.githubusercontent.com/DDdark007/redis_conf/main/kibana.yml" .
+    systemctl daemon-reload
+    systemctl start elasticsearch kibana
+    systemctl enable elasticsearch kibana
+    # 检查集群状态
+    curl -XGET 'http://localhost:9200/_cluster/health?pretty'
+}
+
+#############################################
+# MongoDB 部署及配置
+#############################################
+
+install_mangodb() {
+    log_info "部署 MongoDB 7.0.1"
+    cd /root
+    local mongo_tar="mongodb-linux-x86_64-rhel70-7.0.1.tgz"
+    [[ ! -f $mongo_tar ]] && download_file "https://fastdl.mongodb.org/linux/$mongo_tar"
+    tar xf "$mongo_tar"
+    mv -f mongodb-linux-x86_64-rhel70-7.0.1 /usr/local/mongodb
+    # 创建配置与数据目录
+    mkdir -p /usr/local/mongodb/config /data/mongodb/{logs,data,pid}
+    cat <<'EOF' > /usr/local/mongodb/config/mongodb.conf
+# MongoDB 配置文件
 storage:
   dbPath: /data/mongodb/data
+  engine: wiredTiger
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 16
+    collectionConfig:
+      blockCompressor: snappy
 
-# 设置 MongoDB 实例的最大内存限制（以 GB 为单位）
 systemLog:
   destination: file
   logAppend: true
@@ -311,73 +382,75 @@ systemLog:
 
 processManagement:
   fork: true
-  pidFilePath: /data/mongodb/pid/mongodb.pid  # 指定 PID 文件路径
+  pidFilePath: /data/mongodb/pid/mongodb.pid
 
-# 配置 WiredTiger 存储引擎
-storage:
-  engine: wiredTiger
-  wiredTiger:
-    engineConfig:
-      cacheSizeGB: 16   # 设置 WiredTiger 缓存大小为 4GB
-    collectionConfig:
-      blockCompressor: snappy  # 使用 Snappy 压缩算法
-# 安全配置（可选）
-security:
-  authorization: enabled
 net:
   port: 27017
   bindIp: 0.0.0.0
   maxIncomingConnections: 10000
+
+# 可选安全设置
+security:
+  authorization: enabled
 EOF
+    # 配置环境变量
+    if ! grep -q "MONGODB_HOME=/usr/local/mongodb" /etc/profile; then
+        cat >> /etc/profile <<EOF
 
-# 配置环境变量
-echo "export MONGODB_HOME=/usr/local/mongodb" >> /etc/profile
-echo "export PATH=\${MONGODB_HOME}/bin:\$PATH" >> /etc/profile
-
-# 下载命令行界面命令
-wget https://downloads.mongodb.com/compass/mongosh-1.6.0-linux-x64.tgz
-tar xf mongosh-1.6.0-linux-x64.tgz
-cp -r mongosh-1.6.0-linux-x64/bin/mongosh /usr/local/mongodb/bin/
-source /etc/profile
-echo "mongod --config /usr/local/mongodb/config/mongodb.conf" >> /etc/rc.local
-
-# 启动 MongoDB 服务
-    mongod --config /usr/local/mongodb/config/mongodb.conf
-
-    # 等待一段时间，确保 MongoDB 启动完成
+# MongoDB 环境变量设置
+export MONGODB_HOME=/usr/local/mongodb
+export PATH=\$PATH:\$MONGODB_HOME/bin
+EOF
+    fi
+    source /etc/profile
+    # 下载 mongosh 客户端（可选）
+    cd /root
+    local mongosh_tar="mongosh-1.6.0-linux-x64.tgz"
+    [[ ! -f $mongosh_tar ]] && download_file "https://downloads.mongodb.com/compass/$mongosh_tar"
+    tar xf "$mongosh_tar"
+    cp -f mongosh-1.6.0-linux-x64/bin/mongosh /usr/local/mongodb/bin/
+    # 添加开机自启
+    if ! grep -q "mongod --config /usr/local/mongodb/config/mongodb.conf" /etc/rc.d/rc.local; then
+        echo "mongod --config /usr/local/mongodb/config/mongodb.conf" >> /etc/rc.d/rc.local
+    fi
+    # 启动 MongoDB
+    mongod --config /usr/local/mongodb/config/mongodb.conf &
     sleep 5
-
     # 创建 root 用户
-    echo "Creating root user..."
+    echo "Creating MongoDB root user..."
     mongosh --port 27017 <<EOF
-    use admin
-    db.createRole({
-      role: "root",
-      privileges: [],
-      roles: ["root"]
-    });
-    db.createUser({
-      user: "root",
-      pwd: "5bPoMu3tFdnrQQ90",
-      roles: [{role: "root", db: "admin"}]
-    });
+use admin
+db.createUser({
+  user: "root",
+  pwd: "5bPoMu3tFdnrQQ90",
+  roles: [{role: "root", db: "admin"}]
+});
 EOF
-    echo "MongoDB root user created successfully."
+    echo "MongoDB root 用户创建成功."
 }
-function install_danji()
-{
-	install_java8
-	install_im_bs_upload_jdk17
-	install_nginx
-	install_im_go_mmproxy
-	install_mysql8_el7
-	install_redis
-	install_es
-	install_mangodb
 
+#############################################
+# 主安装函数（可集中调用所有服务安装）
+#############################################
+
+install_danji() {
+    install_java8
+    # install_java11  # 根据需要启用
+    install_im_bs_upload_jdk17
+    install_nginx
+    install_im_go_mmproxy
+    install_mysql8_el7
+    install_redis
+    install_es
+    install_mangodb
 }
+
+#############################################
+# 执行各项安装
+#############################################
+
 install_java8
-#install_java11
+# install_java11  # 如需安装 Java 11 可取消注释
 install_im_bs_upload_jdk17
 install_nginx
 install_im_go_mmproxy
@@ -385,4 +458,7 @@ install_mysql8_el7
 install_redis
 install_es
 install_mangodb
-#install_danji
+# 或者直接调用 install_danji 来一键部署所有服务
+# install_danji
+
+echo -e "\n\033[32m所有组件部署完成！\033[0m"
