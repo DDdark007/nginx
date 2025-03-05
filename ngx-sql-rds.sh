@@ -1,15 +1,10 @@
 #!/bin/bash
-# 启用严格模式，保证出错时退出
-set -euo pipefail
 
 # 检查是否以 root 身份运行
 if [[ $EUID -ne 0 ]]; then
     echo "必须以 root 身份运行该脚本."
     exit 1
 fi
-
-# 加载系统提供的函数（如 action 等），若文件存在则加载
-[[ -f /etc/rc.d/init.d/functions ]] && . /etc/rc.d/init.d/functions
 
 # 全局变量设置
 MYSQL_PWD="oNzQsS4Has3GC6PL"
