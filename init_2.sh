@@ -1,11 +1,4 @@
 #!/bin/bash
-set -euo pipefail
-
-# 确保以 root 身份运行
-if [[ $EUID -ne 0 ]]; then
-  echo "必须以root身份运行该脚本." >&2
-  exit 1
-fi
 
 # 统一日志输出函数
 log_info() {
