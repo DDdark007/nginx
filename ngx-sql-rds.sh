@@ -183,13 +183,14 @@ After=network.target
 Type=simple
 User=root
 LimitNOFILE=65535
-ExecStartPost=/sbin/ip rule add from 127.0.0.1/8 iif lo table 123
-ExecStartPost=/sbin/ip route add local 0.0.0.0/0 dev lo table 123
+Restart=always
+RestartSec=30s
+
+ExecStartPost=-/sbin/ip rule add from 127.0.0.1/8 iif lo table 123
+ExecStartPost=-/sbin/ip route add local 0.0.0.0/0 dev lo table 123
 ExecStart=/usr/bin/go-mmproxy -4 127.0.0.1:9326 -l 0.0.0.0:39326
-ExecStopPost=/sbin/ip rule del from 127.0.0.1/8 iif lo table 123
-ExecStopPost=/sbin/ip route del local 0.0.0.0/0 dev lo table 123
-Restart=on-failure
-RestartSec=10s
+ExecStopPost=-/sbin/ip rule del from 127.0.0.1/8 iif lo table 123
+ExecStopPost=-/sbin/ip route del local 0.0.0.0/0 dev lo table 123
 
 [Install]
 WantedBy=multi-user.target
