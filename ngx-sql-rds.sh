@@ -137,6 +137,7 @@ install_nginx() {
     download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/nginx.conf" .
     cd /usr/local/nginx/conf/vhost/web/
     download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/admin.conf" .
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/images_proxy" .
     download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/down.conf" .
     download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/gateway.conf" .
     download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/web.conf" .
