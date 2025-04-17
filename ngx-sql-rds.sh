@@ -443,7 +443,7 @@ install_danji      -> 套餐1安装所有在一个机器上
 }
 
 main() {
-    case "$1" in
+    case "${1:-}" in
         install_nginxall)
             log_info "开始安装Nginx全组件"
             install_java8
@@ -488,11 +488,15 @@ main() {
 # 脚本入口
 #############################################
 
-# 检查参数数量
-if [ $# -ne 1 ]; then
-    usage
-    exit 1
+# 当通过 bash -c "$(curl)" 方式调用时，参数需要通过 $@ 传递
+if [[ "$0" == *"bash" ]]; then
+    # 当检测到通过 bash -c 方式调用时
+    main "$@"
+else
+    # 常规本地执行方式
+    if [ $# -ne 1 ]; then
+        usage
+        exit 1
+    fi
+    main "$1"
 fi
-
-# 执行主函数
-main "$@"
