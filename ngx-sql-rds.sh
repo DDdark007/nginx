@@ -489,14 +489,9 @@ main() {
 #############################################
 
 # 当通过 bash -c "$(curl)" 方式调用时，参数需要通过 $@ 传递
-if [[ "$0" == *"bash" ]]; then
-    # 当检测到通过 bash -c 方式调用时
-    main "$@"
-else
-    # 常规本地执行方式
-    if [ $# -ne 1 ]; then
-        usage
-        exit 1
-    fi
-    main "$1"
+if [ $# -eq 0 ]; then
+    usage
+    exit 1
 fi
+
+main "$@"
