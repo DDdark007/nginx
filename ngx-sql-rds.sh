@@ -430,32 +430,69 @@ EOF
 # 主安装函数（可集中调用所有服务安装）
 #############################################
 
-install_danji() {
-    install_java8
-    # install_java11  # 根据需要启用
-    install_im_bs_upload_jdk17
-    install_nginx
-    install_im_go_mmproxy
-    install_mysql8_el7
-    install_redis
-    install_es
-    install_mangodb
+usage() {
+    echo -e "用法: $0 [command]
+支持的命令：
+\033[32m
+install_nginxall   -> 安装Nginx相关组件（Java8/17 + Nginx + go-mmproxy）
+install_sql        -> 安装MySQL数据库
+install_rds_es     -> 安装Redis和Elasticsearch
+install_mongo      -> 安装MongoDB
+install_danji      -> 套餐1安装所有在一个机器上
+\033[0m"
+}
+
+main() {
+    case "$1" in
+        install_nginxall)
+            log_info "开始安装Nginx全组件"
+            install_java8
+            install_im_bs_upload_jdk17
+            install_nginx
+            install_im_go_mmproxy
+            ;;
+        install_sql)
+            log_info "开始安装MySQL数据库"
+            install_mysql8_el7
+            ;;
+        install_rds_es)
+            log_info "开始安装Redis和Elasticsearch"
+            install_redis
+            install_es
+            ;;
+        install_mongo)
+            log_info "开始安装MongoDB"
+            install_mangodb
+            ;;
+        install_danji)
+            log_info "开始安装单机所有服务"
+            install_java8
+            install_im_bs_upload_jdk17
+            install_nginx
+            install_im_go_mmproxy
+            install_mysql8_el7
+            install_redis
+            install_es
+            install_mangodb
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+
+    echo -e "\n\033[32m[$(date +'%H:%M:%S')] 组件安装完成！\033[0m"
 }
 
 #############################################
-# 执行各项安装
+# 脚本入口
 #############################################
 
-install_java8
-# install_java11  # 如需安装 Java 11 可取消注释
-install_im_bs_upload_jdk17
-install_nginx
-install_im_go_mmproxy
-install_mysql8_el7
-install_redis
-install_es
-install_mangodb
-# 或者直接调用 install_danji 来一键部署所有服务
-# install_danji
+# 检查参数数量
+if [ $# -ne 1 ]; then
+    usage
+    exit 1
+fi
 
-echo -e "\n\033[32m所有组件部署完成！\033[0m"
+# 执行主函数
+main "$@"
