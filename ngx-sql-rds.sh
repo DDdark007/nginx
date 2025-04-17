@@ -88,7 +88,7 @@ install_im_bs_upload_jdk17() {
 install_nginx() {
     log_info "部署 NGINX-1.22.0"
     # 安装依赖包
-    yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib zlib-devel openssl openssl-devel git || { echo "安装依赖失败"; exit 1; }
+    yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib fontconfig dejavu-sans-fonts lrzsz zlib-devel openssl openssl-devel git || { echo "安装依赖失败"; exit 1; }
 
     # 确保源码目录存在
     mkdir -p /usr/local/src
