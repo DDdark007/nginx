@@ -431,7 +431,7 @@ EOF
 #############################################
 
 usage() {
-    echo -e "用法: $0 [command]
+    echo -e "用法: bash ngx-sql-rds.sh [command]
 支持的命令：
 \033[32m
 install_nginxall   -> 安装Nginx相关组件（Java8/17 + Nginx + go-mmproxy）
@@ -487,9 +487,7 @@ main() {
 #############################################
 # 脚本入口
 #############################################
-
-# 当通过 bash -c "$(curl)" 方式调用时，参数需要通过 $@ 传递
-if [ $# -eq 0 ]; then
+if [ $# -lt 1 ]; then
     usage
     exit 1
 fi
