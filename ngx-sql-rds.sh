@@ -71,8 +71,28 @@ EOF
     which java && java -version
 }
 
-install_im_bs_upload_jdk17() {
+install_java17() {
     log_info "部署 JDK-17"
+    local jdk_url="https://corretto.aws/downloads/resources/17.0.14.7.1/amazon-corretto-17.0.14.7.1-linux-x64.tar.gz"
+    local tar_name="amazon-corretto-17.0.14.7.1-linux-x64.tar.gz"
+    [[ ! -f $tar_name ]] && download_file "$jdk_url"
+    tar xf "$tar_name" -C /usr/local/
+    mv -f /usr/local/amazon-corretto-17.0.14.7.1-linux-x64 /usr/local/java
+    if ! grep -q "JAVA_HOME=/usr/local/java" /etc/profile; then
+        cat >> /etc/profile <<EOF
+
+# Java 17 环境变量设置
+export JAVA_HOME=/usr/local/java
+export PATH=\$PATH:\$JAVA_HOME/bin
+EOF
+    fi
+    source /etc/profile
+    ln -sf /usr/local/java/bin/* /usr/bin/
+    which java && java -version
+}
+
+install_im_bs_upload_jdk17() {
+    log_info "部署 BS_upload_JDK-17"
     local jdk_url="https://corretto.aws/downloads/resources/17.0.14.7.1/amazon-corretto-17.0.14.7.1-linux-x64.tar.gz"
     local tar_name="amazon-corretto-17.0.14.7.1-linux-x64.tar.gz"
     [[ ! -f $tar_name ]] && download_file "$jdk_url"
@@ -85,7 +105,7 @@ install_im_bs_upload_jdk17() {
 # NGINX 安装及配置
 #############################################
 
-install_nginx() {
+install_nginxim() {
     log_info "部署 NGINX-1.22.0"
     # 安装依赖包
     yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib fontconfig dejavu-sans-fonts lrzsz zlib-devel openssl openssl-devel git || { echo "安装依赖失败"; exit 1; }
@@ -159,6 +179,64 @@ install_nginx() {
     mv toa.ko /lib/modules/$(uname -r)/kernel/net/netfilter/ipvs/toa.ko
     insmod /lib/modules/$(uname -r)/kernel/net/netfilter/ipvs/toa.ko
     lsmod | grep toa
+}
+
+install_nginx() {
+    log_info "部署 NGINX-1.22.0"
+    # 安装依赖包
+    yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib fontconfig dejavu-sans-fonts lrzsz zlib-devel openssl openssl-devel git || { echo "安装依赖失败"; exit 1; }
+
+    # 确保源码目录存在
+    mkdir -p /usr/local/src
+    cd /usr/local/src
+
+    # 下载 NGINX 及所需模块源码包
+    download_file "https://nginx.org/download/nginx-1.22.0.tar.gz"
+    download_file "https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz"
+    [[ ! -d ngx_http_geoip2_module ]] && git clone https://github.com/leev/ngx_http_geoip2_module.git
+    [[ ! -d ngx_healthcheck_module ]] && git clone https://github.com/zhouchangxun/ngx_healthcheck_module.git
+    [[ ! -d GeoLite2 ]] && git clone https://github.com/DDdark007/GeoLite2.git
+
+    # 解压源码包
+    tar xf libmaxminddb-1.6.0.tar.gz
+    tar xf nginx-1.22.0.tar.gz
+
+    # 安装 libmaxminddb
+    cd libmaxminddb-1.6.0
+    ./configure && make && make install
+    ldconfig
+    echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf
+    ldconfig
+
+    # 编译安装 NGINX
+    cd ../nginx-1.22.0
+    ./configure --with-http_ssl_module --with-stream --with-http_realip_module \
+      --http-client-body-temp-path=/tmp \
+      --with-http_v2_module --with-http_stub_status_module --with-http_gzip_static_module \
+      --with-pcre --with-stream_ssl_module --with-stream_realip_module \
+      --add-module=/usr/local/src/ngx_healthcheck_module --add-module=/usr/local/src/ngx_http_geoip2_module
+    make && make install
+
+    # 建立软连接及目录结构
+    ln -sf /usr/local/nginx/sbin/nginx /usr/bin/nginx
+    mkdir -p /usr/local/nginx/{geoip,data,conf/ssl}
+    mkdir -p /home/upload/
+    # 部署 GeoIP2 数据库（将 GeoLite2 中内容复制过去）
+    cp -r /usr/local/src/GeoLite2/* /usr/local/nginx/geoip/ 2>/dev/null || true
+
+    mkdir -p /usr/local/nginx/conf/vhost/{web,default}
+    cd /usr/local/nginx/conf/vhost/default
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/default.conf" .
+
+    cd /usr/local/nginx/conf/
+    [[ -f nginx.conf ]] && mv nginx.conf nginx.conf.bak.$DATE
+    download_file "https://raw.githubusercontent.com/DDdark007/nginx/refs/heads/main/allconf/nginx.conf" .
+
+    # 添加开机自启（将 nginx 加入 /etc/rc.local）
+    chmod +x /etc/rc.d/rc.local
+    if ! grep -q "/usr/local/nginx/sbin/nginx" /etc/rc.d/rc.local; then
+        echo "/usr/local/nginx/sbin/nginx" >> /etc/rc.d/rc.local
+    fi
 }
 
 #############################################
@@ -437,8 +515,11 @@ usage() {
 install_nginxall   -> 安装Nginx相关组件（Java8/17 + Nginx + go-mmproxy）
 install_sql        -> 安装MySQL数据库
 install_rds_es     -> 安装Redis和Elasticsearch
+install_rds        -> 安装Redis
 install_mongo      -> 安装MongoDB
 install_danji      -> 套餐1安装所有在一个机器上
+install_nginxd     -> 安装单NGinx
+install_jdk17      -> 安装jdk17
 \033[0m"
 }
 
@@ -448,8 +529,14 @@ main() {
             log_info "开始安装Nginx全组件"
             install_java8
             install_im_bs_upload_jdk17
-            install_nginx
+            install_nginxim
             install_im_go_mmproxy
+            ;;
+        install_nginxd)
+            install_nginx
+            ;;
+        install_jdk17)
+            install_java17
             ;;
         install_sql)
             log_info "开始安装MySQL数据库"
@@ -460,6 +547,10 @@ main() {
             install_redis
             install_es
             ;;
+        install_rds)
+            log_info "开始安装Redis"
+            install_redis
+            ;;
         install_mongo)
             log_info "开始安装MongoDB"
             install_mangodb
@@ -468,7 +559,7 @@ main() {
             log_info "开始安装单机所有服务"
             install_java8
             install_im_bs_upload_jdk17
-            install_nginx
+            install_nginxim
             install_im_go_mmproxy
             install_mysql8_el7
             install_redis
