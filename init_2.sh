@@ -66,7 +66,7 @@ setup_yum() {
   yum clean all &>/dev/null
   yum makecache fast &>/dev/null
 
-  yum install -y ntpdate lsof net-tools vim htop &>/dev/null
+  yum install -y ntpdate lsof net-tools vim htop fontconfig dejavu-sans-fonts &>/dev/null
   echo "常用工具安装完成"
 }
 
