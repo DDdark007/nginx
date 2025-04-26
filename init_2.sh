@@ -113,6 +113,7 @@ net.ipv4.conf.default.accept_source_route = 0
 # 系统安全和核心转储设置
 kernel.sysrq = 0
 kernel.core_uses_pid = 1
+vm.overcommit_memory = 1
 
 # TCP连接优化
 net.ipv4.tcp_syncookies = 1
