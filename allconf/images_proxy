@@ -1,71 +1,179 @@
-    location = /mytio/user/updateAvatar.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+# 头像上传
+location = /mytio/user/updateAvatar.tio_x {
+    proxy_pass http://127.0.0.1:8090;
 
-    location = /mytio/group/modifyAvatar.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
 
-    location = /mytio/chat/file.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    client_max_body_size 20m;
+    client_body_buffer_size 512k;
 
-    location = /mytio/chat/file/upload.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
 
-    location = /mytio/chat/img.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    proxy_buffering off;
+}
 
-    location = /mytio/chat/img/upload.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+# 群头像修改
+location = /mytio/group/modifyAvatar.tio_x {
+    proxy_pass http://127.0.0.1:8090;
 
-    location = /mytio/chat/video.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
 
-    location = /mytio/chat/video/upload.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    client_max_body_size 20m;
+    client_body_buffer_size 512k;
 
-    location = /mytio/chat/audio.tio_x {
-        proxy_pass http://127.0.0.1:8090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+
+    proxy_buffering off;
+}
+
+# 文件下载
+location = /mytio/chat/file.tio_x {
+    proxy_pass http://127.0.0.1:8090;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+
+    proxy_buffering on;
+    proxy_buffers 16 32k;
+    proxy_buffer_size 64k;
+    proxy_busy_buffers_size 128k;
+
+    add_header Cache-Control "public, max-age=86400";
+    expires 1d;
+}
+
+# 文件上传
+location = /mytio/chat/file/upload.tio_x {
+    proxy_pass http://127.0.0.1:8090;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    client_max_body_size 200m;
+    client_body_buffer_size 1m;
+
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 120s;
+    proxy_read_timeout 120s;
+
+    proxy_buffering off;
+}
+
+# 图片读取
+location = /mytio/chat/img.tio_x {
+    proxy_pass http://127.0.0.1:8090;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+
+    proxy_buffering on;
+    proxy_buffers 16 32k;
+    proxy_buffer_size 64k;
+
+    add_header Cache-Control "public, max-age=86400";
+    expires 1d;
+}
+
+# 图片上传
+location = /mytio/chat/img/upload.tio_x {
+    proxy_pass http://127.0.0.1:8090;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    client_max_body_size 100m;
+    client_body_buffer_size 1m;
+
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
+
+    proxy_buffering off;
+}
+
+# 视频读取
+location = /mytio/chat/video.tio_x {
+    proxy_pass http://127.0.0.1:8090;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+
+    proxy_buffering on;
+    proxy_buffers 32 64k;
+    proxy_buffer_size 128k;
+
+    add_header Cache-Control "public, max-age=86400";
+    expires 1d;
+}
+
+# 视频上传
+location = /mytio/chat/video/upload.tio_x {
+    proxy_pass http://127.0.0.1:8090;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    client_max_body_size 300m;
+    client_body_buffer_size 2m;
+
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 180s;
+    proxy_read_timeout 180s;
+
+    proxy_buffering off;
+}
+
+# 音频读取
+location = /mytio/chat/audio.tio_x {
+    proxy_pass http://127.0.0.1:8090;
+
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $real_ip;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 30s;
+    proxy_read_timeout 30s;
+
+    proxy_buffering on;
+    proxy_buffers 16 32k;
+    proxy_buffer_size 64k;
+
+    add_header Cache-Control "public, max-age=86400";
+    expires 1d;
+}
