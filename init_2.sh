@@ -156,6 +156,11 @@ fs.file-max = 2097152
 
 # 虚拟内存交换策略
 vm.swappiness = 10
+
+# 强化 TCP keepalive 检测，快速剔除死连接
+net.ipv4.tcp_keepalive_time = 60
+net.ipv4.tcp_keepalive_intvl = 10
+net.ipv4.tcp_keepalive_probes = 6
 EOF
   fi
   sysctl -p &>/dev/null
