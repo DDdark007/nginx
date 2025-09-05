@@ -106,7 +106,7 @@ install_im_bs_upload_jdk17() {
 #############################################
 
 install_nginxim() {
-    log_info "部署 NGINX-1.22.0"
+    log_info "部署 NGINX-1.28.0"
     # 安装依赖包
     yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib fontconfig dejavu-sans-fonts lrzsz zlib-devel openssl openssl-devel git || { echo "安装依赖失败"; exit 1; }
 
@@ -115,7 +115,7 @@ install_nginxim() {
     cd /usr/local/src
 
     # 下载 NGINX 及所需模块源码包
-    download_file "https://nginx.org/download/nginx-1.22.0.tar.gz"
+    download_file "https://nginx.org/download/nginx-1.28.0.tar.gz"
     download_file "https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz"
     [[ ! -d ngx_http_geoip2_module ]] && git clone https://github.com/leev/ngx_http_geoip2_module.git
     [[ ! -d ngx_healthcheck_module ]] && git clone https://github.com/zhouchangxun/ngx_healthcheck_module.git
@@ -123,7 +123,7 @@ install_nginxim() {
 
     # 解压源码包
     tar xf libmaxminddb-1.6.0.tar.gz
-    tar xf nginx-1.22.0.tar.gz
+    tar xf nginx-1.28.0.tar.gz
 
     # 安装 libmaxminddb
     cd libmaxminddb-1.6.0
@@ -133,7 +133,7 @@ install_nginxim() {
     ldconfig
 
     # 编译安装 NGINX
-    cd ../nginx-1.22.0
+    cd ../nginx-1.28.0
     ./configure --with-http_ssl_module --with-stream --with-http_realip_module \
       --http-client-body-temp-path=/tmp \
       --with-http_v2_module --with-http_stub_status_module --with-http_gzip_static_module \
@@ -182,7 +182,7 @@ install_nginxim() {
 }
 
 install_nginx() {
-    log_info "部署 NGINX-1.22.0"
+    log_info "部署 NGINX-1.28.0"
     # 安装依赖包
     yum -y install wget gcc gcc-c++ automake pcre pcre-devel zlib fontconfig dejavu-sans-fonts lrzsz zlib-devel openssl openssl-devel git || { echo "安装依赖失败"; exit 1; }
 
@@ -191,7 +191,7 @@ install_nginx() {
     cd /usr/local/src
 
     # 下载 NGINX 及所需模块源码包
-    download_file "https://nginx.org/download/nginx-1.22.0.tar.gz"
+    download_file "https://nginx.org/download/nginx-1.28.0.tar.gz"
     download_file "https://github.com/maxmind/libmaxminddb/releases/download/1.6.0/libmaxminddb-1.6.0.tar.gz"
     [[ ! -d ngx_http_geoip2_module ]] && git clone https://github.com/leev/ngx_http_geoip2_module.git
     [[ ! -d ngx_healthcheck_module ]] && git clone https://github.com/zhouchangxun/ngx_healthcheck_module.git
@@ -199,7 +199,7 @@ install_nginx() {
 
     # 解压源码包
     tar xf libmaxminddb-1.6.0.tar.gz
-    tar xf nginx-1.22.0.tar.gz
+    tar xf nginx-1.28.0.tar.gz
 
     # 安装 libmaxminddb
     cd libmaxminddb-1.6.0
@@ -209,7 +209,7 @@ install_nginx() {
     ldconfig
 
     # 编译安装 NGINX
-    cd ../nginx-1.22.0
+    cd ../nginx-1.28.0
     ./configure --with-http_ssl_module --with-stream --with-http_realip_module \
       --http-client-body-temp-path=/tmp \
       --with-http_v2_module --with-http_stub_status_module --with-http_gzip_static_module \
