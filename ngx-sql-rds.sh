@@ -263,7 +263,7 @@ Type=simple
 User=root
 LimitNOFILE=65535
 Restart=always
-RestartSec=30s
+RestartSec=5s
 
 ExecStartPost=-/sbin/ip rule add from 127.0.0.1/8 iif lo table 123
 ExecStartPost=-/sbin/ip route add local 0.0.0.0/0 dev lo table 123
