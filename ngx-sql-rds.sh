@@ -256,25 +256,18 @@ install_im_go_mmproxy() {
     cat > /etc/systemd/system/go-mmproxy.service << 'EOF'
 [Unit]
 Description=go-mmproxy service
-After=network-online.target
-Wants=network-online.target
+After=network.target
 
 [Service]
 Type=simple
 User=root
 LimitNOFILE=65535
 Restart=always
-RestartSec=5s
-StartLimitIntervalSec=60
-StartLimitBurst=5
+RestartSec=10s
 
-ExecStartPre=-/sbin/ip rule del from 127.0.0.1/8 iif lo table 123
-ExecStartPre=-/sbin/ip route del local 0.0.0.0/0 dev lo table 123
 ExecStartPost=-/sbin/ip rule add from 127.0.0.1/8 iif lo table 123
 ExecStartPost=-/sbin/ip route add local 0.0.0.0/0 dev lo table 123
-
 ExecStart=/usr/bin/go-mmproxy -4 127.0.0.1:9326 -l 0.0.0.0:39326
-
 ExecStopPost=-/sbin/ip rule del from 127.0.0.1/8 iif lo table 123
 ExecStopPost=-/sbin/ip route del local 0.0.0.0/0 dev lo table 123
 
