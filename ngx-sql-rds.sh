@@ -255,21 +255,35 @@ install_im_go_mmproxy() {
     # 创建 systemd 服务
     cat > /etc/systemd/system/go-mmproxy.service << 'EOF'
 [Unit]
-Description=go-mmproxy service
+Description=go-mmproxy (High Performance, Single Instance)
 After=network.target
 
 [Service]
 Type=simple
 User=root
-LimitNOFILE=65535
+LimitNOFILE=500000
 Restart=always
-RestartSec=10s
+RestartSec=2s
 
-ExecStartPost=-/sbin/ip rule add from 127.0.0.1/8 iif lo table 123
-ExecStartPost=-/sbin/ip route add local 0.0.0.0/0 dev lo table 123
-ExecStart=/usr/bin/go-mmproxy -4 127.0.0.1:9326 -l 0.0.0.0:39326
-ExecStopPost=-/sbin/ip rule del from 127.0.0.1/8 iif lo table 123
-ExecStopPost=-/sbin/ip route del local 0.0.0.0/0 dev lo table 123
+# ----------- 清除旧规则（不会报错）-----------
+ExecStartPre=/bin/sh -c "ip rule show | grep -q 'from 127.0.0.1/8 lookup 123' && ip rule del from 127.0.0.1/8 table 123 || true"
+ExecStartPre=/bin/sh -c "ip route show table 123 | grep -q 'local 0.0.0.0/0 dev lo' && ip route del local 0.0.0.0/0 dev lo table 123 || true"
+
+# ----------- 添加必要规则（已存在则跳过）-----------
+ExecStartPre=/bin/sh -c "! ip rule show | grep -q 'from 127.0.0.1/8 lookup 123' && ip rule add from 127.0.0.1/8 table 123 || true"
+ExecStartPre=/bin/sh -c "! ip route show table 123 | grep -q 'local 0.0.0.0/0 dev lo' && ip route add local 0.0.0.0/0 dev lo table 123 || true"
+
+# ----------- 启动 go-mmproxy -----------
+ExecStart=/usr/bin/go-mmproxy \
+    -4 127.0.0.1:9326 \
+    -l 0.0.0.0:39326 \
+    -p tcp \
+    -listeners 32 \
+    -v 1
+
+# ----------- 稳定清理（不会报错）-----------
+ExecStopPost=/bin/sh -c "ip rule del from 127.0.0.1/8 table 123 || true"
+ExecStopPost=/bin/sh -c "ip route del local 0.0.0.0/0 dev lo table 123 || true"
 
 [Install]
 WantedBy=multi-user.target
