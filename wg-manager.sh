@@ -15,6 +15,16 @@ LOGROTATE_CONF="/etc/logrotate.d/wireguard-connection"
 WG_PORT=443
 
 ###############################################
+# 内核转发模块
+###############################################
+enable_ip_forward() {
+    echo "net.ipv4.ip_forward=1" > /etc/sysctl.d/99-wireguard.conf
+    echo "net.ipv4.conf.all.rp_filter=0" >> /etc/sysctl.d/99-wireguard.conf
+    echo "net.ipv4.conf.default.rp_filter=0" >> /etc/sysctl.d/99-wireguard.conf
+    sysctl -p /etc/sysctl.d/99-wireguard.conf
+}
+
+###############################################
 # 获取出口网卡
 ###############################################
 get_uplink_iface() {
@@ -236,7 +246,11 @@ EOF
     # ✅ 默认客户端
     create_client "default" "10.8.0.2"
 
+    enable_ip_forward
     install_logger
+    iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+    iptables -A FORWARD -i wg0 -j ACCEPT
+    iptables -A FORWARD -o wg0 -j ACCEPT
 
     SERVER_IP=$(curl -s ifconfig.me)
 
