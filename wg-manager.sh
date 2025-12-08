@@ -25,6 +25,50 @@ enable_ip_forward() {
 }
 
 ###############################################
+# WireGuard VPN 专用 sysctl 优化（完整）
+optimize_sysctl() {
+cat > /etc/sysctl.d/99-wireguard-tuning.conf <<'EOF'
+# =============================
+# WireGuard VPN 系统优化
+# =============================
+
+# 1. 启用 IPv4 转发
+net.ipv4.ip_forward = 1
+
+# 2. 禁用 rp_filter（AWS 必须）
+net.ipv4.conf.all.rp_filter = 0
+net.ipv4.conf.default.rp_filter = 0
+
+# 3. 提升队列长度（UDP/WG 非常重要）
+net.core.somaxconn = 4096
+net.core.netdev_max_backlog = 4096
+
+# 4. 提升 UDP buffer（WireGuard 高速传输优化）
+net.ipv4.udp_rmem_min = 16384
+net.ipv4.udp_wmem_min = 16384
+
+# 5. 提高 conntrack 限制（防止高并发 drop）
+net.netfilter.nf_conntrack_max = 262144
+
+# 6. 减少 TIME_WAIT 对系统的影响
+net.ipv4.tcp_tw_reuse = 1
+
+# 7. 禁止 ICMP redirect（安全强化）
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+
+# 8. BBR + FQ（如果系统支持）
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+EOF
+
+sysctl --system >/dev/null 2>&1 || true
+echo "✅ 已应用 WireGuard VPN sysctl 优化"
+}
+
+###############################################
 # 获取出口网卡
 ###############################################
 get_uplink_iface() {
@@ -211,7 +255,7 @@ sysctl --system >/dev/null 2>&1 || true
 # ✅ 安装 WireGuard（统一端口：443）
 ###############################################
 install_wireguard() {
-
+    optimize_sysctl
     amazon-linux-extras install -y epel
     yum install -y wireguard-tools wireguard-dkms qrencode
 
