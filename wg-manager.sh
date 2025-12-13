@@ -201,7 +201,7 @@ DNS = 1.1.1.1
 [Peer]
 PublicKey = $SERVER_PUB
 Endpoint = $SERVER_IP:$WG_PORT
-AllowedIPs = 0.0.0.0/0
+AllowedIPs = 0.0.0.0/0, ::/0
 PersistentKeepalive = 25
 EOF
 
